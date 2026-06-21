@@ -28,6 +28,7 @@ export function createGame(input) {
     },
     foxSpawnTimer: 4,
     roundOverTimer: 0,
+    tutorial: createTutorialState(),
   };
 
   function update(delta) {
@@ -110,11 +111,15 @@ export function createGame(input) {
   function startRound() {
     state.screen = "playing";
     state.juice = 0;
-    state.message = `Phase ${state.phase}`;
-    state.grapes = GRAPE_SITES.slice(0, Math.min(4 + state.phase, GRAPE_SITES.length)).map(createGrape);
+    state.message = isTutorialRound() ? "Tutorial" : `Phase ${difficultyPhase()}`;
+    state.tutorial = createTutorialState();
+    state.grapes = isTutorialRound()
+      ? [createGrape(GRAPE_SITES[2], 0)]
+      : GRAPE_SITES.slice(0, Math.min(4 + difficultyPhase(), GRAPE_SITES.length)).map(createGrape);
     state.foxes = [];
     state.particles = [];
-    state.foxSpawnTimer = Math.max(1.4, 4.2 - state.phase * 0.35);
+    state.foxSpawnTimer = isTutorialRound() ? 999 : Math.max(1.4, 4.2 - difficultyPhase() * 0.35);
+    state.juiceGoal = isTutorialRound() ? 1 : Math.min(3 + difficultyPhase(), 10);
     state.winepress.loaded = null;
     state.winepress.strokes = 0;
     state.winepress.leftOffset = 0;
@@ -149,6 +154,26 @@ export function createGame(input) {
     };
   }
 
+  function createTutorialState() {
+    return {
+      moved: false,
+      scaredFox: false,
+      harvested: false,
+      deposited: false,
+      pumped: false,
+      foxSpawned: false,
+      text: "Press any listed controls to join.",
+    };
+  }
+
+  function isTutorialRound() {
+    return state.phase === 1;
+  }
+
+  function difficultyPhase() {
+    return Math.max(1, state.phase - 1);
+  }
+
   function updatePlayers(delta) {
     state.winepress.highlightVat = false;
     state.winepress.highlightPumps = state.winepress.loaded !== null;
@@ -161,6 +186,7 @@ export function createGame(input) {
 
       if (move !== 0) {
         player.facing = move;
+        state.tutorial.moved = true;
       }
 
       if (player.dropTimer > 0) {
@@ -179,6 +205,7 @@ export function createGame(input) {
         player.vy = -650;
         player.onGround = false;
         player.wasAirborne = true;
+        state.tutorial.moved = true;
       }
 
       const previousY = player.y;
@@ -282,6 +309,7 @@ export function createGame(input) {
     state.winepress.lastPumpSide = side;
     state.winepress.strokes += 1;
     player.stats.pumpStrokes += 1;
+    state.tutorial.pumped = true;
     burst(PRESS.vat.x + PRESS.vat.width / 2, PRESS.vat.y, "#c43b74", 8);
 
     if (state.winepress.strokes >= PRESS.requiredStrokes) {
@@ -299,6 +327,7 @@ export function createGame(input) {
         state.winepress.strokes = 0;
         player.carrying = null;
         player.stats.delivered += 1;
+        state.tutorial.deposited = true;
         burst(PRESS.vat.x + PRESS.vat.width / 2, PRESS.vat.y, "#8f3fa2", 12);
       } else if (state.winepress.loaded === null) {
         state.winepress.highlightVat = true;
@@ -311,6 +340,7 @@ export function createGame(input) {
         player.carrying = grape;
         grape.gone = true;
         grape.onGround = false;
+        state.tutorial.harvested = true;
         burst(grape.x, grape.y, "#c463c7", 10);
         return;
       }
@@ -340,10 +370,14 @@ export function createGame(input) {
   }
 
   function updateFoxes(delta) {
-    state.foxSpawnTimer -= delta;
-    if (state.foxSpawnTimer <= 0) {
-      spawnFox();
-      state.foxSpawnTimer = Math.max(1.1, 4 - state.phase * 0.3 + Math.random() * 1.2);
+    if (isTutorialRound()) {
+      updateTutorialFox();
+    } else {
+      state.foxSpawnTimer -= delta;
+      if (state.foxSpawnTimer <= 0) {
+        spawnFox();
+        state.foxSpawnTimer = Math.max(1.1, 4 - state.phase * 0.3 + Math.random() * 1.2);
+      }
     }
 
     for (const fox of state.foxes) {
@@ -358,6 +392,11 @@ export function createGame(input) {
         fox.carrying.x = fox.x + FOX_WIDTH / 2;
         fox.carrying.y = fox.y - 8;
       } else if (fox.target) {
+        if (!canFoxSteal(fox.target)) {
+          retargetOrFlee(fox);
+          continue;
+        }
+
         const direction = Math.sign(fox.target.x - centerX(fox)) || 1;
         fox.x += direction * fox.speed * delta;
         fox.facing = direction;
@@ -382,13 +421,23 @@ export function createGame(input) {
     state.foxes = state.foxes.filter((fox) => fox.x > -90 && fox.x < WORLD.width + 90);
   }
 
-  function spawnFox() {
-    const candidates = state.grapes.filter((grape) => canFoxSteal(grape));
+  function updateTutorialFox() {
+    const grape = state.grapes[0];
+    if (!state.tutorial.foxSpawned && grape && grape.stage === "unripe" && canFoxSteal(grape)) {
+      spawnFox(grape, true);
+      state.tutorial.foxSpawned = true;
+    }
+  }
+
+  function spawnFox(preferredTarget = null, forcedFromLeft = null) {
+    const candidates = preferredTarget && canFoxSteal(preferredTarget)
+      ? [preferredTarget]
+      : state.grapes.filter((grape) => canFoxSteal(grape));
     if (candidates.length === 0) {
       return;
     }
 
-    const fromLeft = Math.random() < 0.5;
+    const fromLeft = forcedFromLeft ?? Math.random() < 0.5;
     const target = candidates[Math.floor(Math.random() * candidates.length)];
     state.foxes.push({
       x: fromLeft ? -FOX_WIDTH : WORLD.width + FOX_WIDTH,
@@ -403,6 +452,32 @@ export function createGame(input) {
       facing: fromLeft ? 1 : -1,
       animationTime: 0,
     });
+  }
+
+  function retargetOrFlee(fox) {
+    const candidates = state.grapes.filter((grape) => canFoxSteal(grape));
+    if (candidates.length > 0) {
+      fox.target = closestGrape(fox, candidates);
+      fox.y = foxLaneY(fox.target);
+      return;
+    }
+
+    fox.target = null;
+    fox.state = "fleeing";
+    fox.escapeDirection = centerX(fox) < WORLD.width / 2 ? -1 : 1;
+  }
+
+  function closestGrape(fox, grapes) {
+    let closest = grapes[0];
+    let closestDistance = distance(fox, closest);
+    for (const grape of grapes.slice(1)) {
+      const grapeDistance = distance(fox, grape);
+      if (grapeDistance < closestDistance) {
+        closest = grape;
+        closestDistance = grapeDistance;
+      }
+    }
+    return closest;
   }
 
   function canFoxSteal(grape) {
@@ -446,15 +521,51 @@ export function createGame(input) {
       fox.state = "fleeing";
       fox.escapeDirection = fox.x < player.x ? -1 : 1;
       player.stats.foxesScared += 1;
+      state.tutorial.scaredFox = true;
       burst(fox.x + FOX_WIDTH / 2, fox.y, "#ffd166", 10);
     }
   }
 
+  function updateTutorialText() {
+    const controls = state.players[0] ? CONTROL_SETS[state.players[0].controlIndex] : CONTROL_SETS[1];
+    const grape = state.grapes[0];
+
+    if (state.players.length === 0) {
+      state.tutorial.text = "Press any listed controls to join.";
+    } else if (!state.tutorial.moved) {
+      state.tutorial.text = `Move with ${keyLabel(controls.left)}/${keyLabel(controls.right)}. Jump with ${keyLabel(controls.jump)}.`;
+    } else if (!state.tutorial.scaredFox && state.tutorial.foxSpawned && state.foxes.some((fox) => fox.state !== "fleeing")) {
+      state.tutorial.text = "A fox is coming! Run close to scare it away.";
+    } else if (grape && grape.stage !== "ripe" && !state.tutorial.harvested) {
+      state.tutorial.text = "Protect the blossom while it grows into ripe grapes.";
+    } else if (!state.tutorial.harvested) {
+      state.tutorial.text = "The grapes are ripe. Touch them to pick them up.";
+    } else if (!state.tutorial.deposited) {
+      state.tutorial.text = "Carry the grapes to the glowing winepress vat.";
+    } else if (!state.tutorial.pumped) {
+      state.tutorial.text = "Jump onto either pump platform to start pressing.";
+    } else {
+      state.tutorial.text = "Alternate left and right pump landings to fill the juice jar.";
+    }
+  }
+
+  function keyLabel(code) {
+    if (code.startsWith("Key")) {
+      return code.slice(3);
+    }
+
+    return code.replace("Arrow", "");
+  }
+
   function checkRoundState() {
+    if (isTutorialRound()) {
+      updateTutorialText();
+    }
+
     if (state.juice >= state.juiceGoal) {
       state.screen = "roundWon";
       state.roundOverTimer = 2.4;
-      state.message = `Phase ${state.phase} complete`;
+      state.message = isTutorialRound() ? "Tutorial complete" : `Phase ${difficultyPhase()} complete`;
       return;
     }
 
@@ -462,7 +573,7 @@ export function createGame(input) {
     const carriedGrapes = state.players.some((player) => player.carrying) || state.winepress.loaded;
     if (!usefulGrapes && !carriedGrapes) {
       state.screen = "gameOver";
-      state.message = "The vineyard was overrun. Press R to restart.";
+      state.message = `Your vineyard lost too many grapes this harvest.\nNeeded ${state.juiceGoal} grapes, harvested ${state.juice}. Press R to restart.`;
     }
   }
 

@@ -1,6 +1,8 @@
 import { PLATFORMS, PRESS, WORLD } from "./config.js";
 import { drawFrame, foxAnimations, playerAnimations, sprites } from "./sprites.js";
 
+const FONT = '"Press Start 2P", monospace';
+
 export function render(ctx, state) {
   ctx.clearRect(0, 0, WORLD.width, WORLD.height);
   drawBackground(ctx);
@@ -223,25 +225,51 @@ function drawHud(ctx, state) {
   ctx.fillRect(16, 14, 928, 58);
 
   ctx.fillStyle = "#f7ead1";
-  ctx.font = "18px monospace";
+  ctx.font = `16px ${FONT}`;
   ctx.fillText("VINEGUARD", 32, 40);
-  ctx.font = "13px monospace";
+  ctx.font = `9px ${FONT}`;
   ctx.fillText('Song of Solomon 2:15 - "Catch the foxes for us..."', 32, 61);
 
   drawJuiceJar(ctx, state);
   drawPlayerStatus(ctx, state);
+  drawTutorialText(ctx, state);
 
   if (state.screen !== "playing") {
     ctx.fillStyle = "rgba(21, 24, 31, 0.68)";
     ctx.fillRect(0, 0, WORLD.width, WORLD.height);
     ctx.fillStyle = "#f7ead1";
-    ctx.font = "28px monospace";
+    ctx.font = `18px ${FONT}`;
     ctx.textAlign = "center";
-    ctx.fillText(state.message, WORLD.width / 2, 230);
-    ctx.font = "16px monospace";
-    ctx.fillText("Join: Arrows, WASD, YGHJ, or PL;'", WORLD.width / 2, 266);
+    drawCenteredLines(ctx, state.message, WORLD.width / 2, 220, 28);
+    ctx.font = `10px ${FONT}`;
+    ctx.fillText("Join: Arrows, WASD, YGHJ, or PL;'", WORLD.width / 2, 294);
     ctx.textAlign = "left";
   }
+}
+
+function drawCenteredLines(ctx, text, x, y, lineHeight) {
+  const lines = text.split("\n");
+  const startY = y - ((lines.length - 1) * lineHeight) / 2;
+  for (let index = 0; index < lines.length; index += 1) {
+    ctx.fillText(lines[index], x, startY + index * lineHeight);
+  }
+}
+
+function drawTutorialText(ctx, state) {
+  if (state.phase !== 0 || state.screen !== "playing") {
+    return;
+  }
+
+  ctx.fillStyle = "rgba(21, 24, 31, 0.82)";
+  ctx.fillRect(128, 86, 704, 46);
+  ctx.strokeStyle = "#f7e06e";
+  ctx.lineWidth = 3;
+  ctx.strokeRect(128, 86, 704, 46);
+  ctx.fillStyle = "#f7ead1";
+  ctx.font = `10px ${FONT}`;
+  ctx.textAlign = "center";
+  ctx.fillText(state.tutorial.text, WORLD.width / 2, 115);
+  ctx.textAlign = "left";
 }
 
 function drawJuiceJar(ctx, state) {
@@ -253,7 +281,7 @@ function drawJuiceJar(ctx, state) {
   ctx.fillStyle = "#8f3fa2";
   ctx.fillRect(x + 4, y + 4, ((112 * state.juice) / state.juiceGoal), 20);
   ctx.fillStyle = "#f7ead1";
-  ctx.font = "13px monospace";
+  ctx.font = `9px ${FONT}`;
   ctx.fillText(`Juice ${state.juice}/${state.juiceGoal}`, x + 134, y + 19);
 }
 
@@ -263,7 +291,7 @@ function drawPlayerStatus(ctx, state) {
     ctx.fillStyle = player.color;
     ctx.fillRect(x, 31, 12, 12);
     ctx.fillStyle = "#f7ead1";
-    ctx.font = "12px monospace";
+    ctx.font = `8px ${FONT}`;
     ctx.fillText(`P${player.id} ${player.controlName}`, x + 17, 42);
     x += 112;
   }
