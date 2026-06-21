@@ -6,6 +6,10 @@ _A fast-paced local multiplayer cooperative PvE harvest-and-defense action platf
 
 Players protect a vineyard, harvest ripe grape clusters, carry them to a central winepress, and alternate jumps on pump platforms to fill the juice jar before foxes steal the crop.
 
+## Design Spec / Prompt
+
+My full design spec / prompt is [located here](spec.md) -- both if you want to read more of the game design, as well as how I tend to arrange my prompts.
+
 ## Play Online
 
 Official deployment is hosted here on Github Pages:
@@ -44,5 +48,7 @@ npm run check
 The project intentionally uses no build step. Source files are plain JavaScript modules loaded directly by the browser.
 
 ## Credits
+
+Vibe-coded in Github Copilot using GPT 5.5.
 
 [Character](https://elthen.itch.io/pixel-art-adventurer-sprites), [fox](https://elthen.itch.io/2d-pixel-art-fox-sprites), and forest pixel art sprites are by Elthen and used under [Elthen's Common Sense License 1.0](https://www.patreon.com/elthen/posts/licensing-27430241).
