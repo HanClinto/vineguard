@@ -2,9 +2,8 @@
 
 _A fast-paced local multiplayer cooperative PvE harvest-and-defense action platformer with party-game pressure and light competitive stats._
 
-> "Catch the foxes for us, the little foxes that spoil the vineyards, for our vineyards are in blossom." - Song of Solomon 2:15
-
-Players protect a vineyard, harvest ripe grape clusters, carry them to a central winepress, and alternate jumps on pump platforms to fill the juice jar before foxes steal the crop.
+> "Catch the foxes for us, the little foxes that spoil the vineyards, for our vineyards are in blossom."
+_Song of Solomon 2:15_
 
 ## Design Spec / Prompt
 
@@ -12,9 +11,7 @@ My full design spec / prompt is [located here](spec.md) -- both if you want to r
 
 ## Play Online
 
-Official deployment is hosted here on Github Pages:
-
-hanclinto.github.io/vineguard/
+https://hanclinto.github.io/vineguard/
 
 ## Play Locally
 
