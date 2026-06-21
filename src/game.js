@@ -599,7 +599,7 @@ export function createGame(input) {
     if (state.juice >= state.juiceGoal) {
       state.screen = "roundWon";
       state.roundOverTimer = 2.4;
-      state.message = isTutorialRound() ? "Level 1 complete" : `Phase ${difficultyPhase()} complete`;
+      state.message = `Phase ${difficultyPhase()} complete`;
       return;
     }
 
