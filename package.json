@@ -1,0 +1,10 @@
+{
+  "name": "vineguard",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "serve": "python3 -m http.server 8000",
+    "check": "node --check src/config.js && node --check src/input.js && node --check src/game.js && node --check src/render.js && node --check src/main.js"
+  }
+}
