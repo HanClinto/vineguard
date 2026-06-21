@@ -10,9 +10,9 @@ export const sprites = {
   frameSize: FRAME_SIZE,
   players: [
     image("src/assets/generated/player_1_male_red.png"),
-    image("src/assets/generated/player_2_female_blue.png"),
+    image("src/assets/generated/player_2_male_blue.png"),
     image("src/assets/generated/player_3_male_gold.png"),
-    image("src/assets/generated/player_4_female_green.png"),
+    image("src/assets/generated/player_4_male_green.png"),
   ],
   fox: image("src/assets/fox_sprite_sheet_by_elthlen.png"),
 };
@@ -20,12 +20,13 @@ export const sprites = {
 export const playerAnimations = {
   idle: { row: 0, frames: [0, 1, 2, 3], fps: 4 },
   run: { row: 1, frames: [0, 1, 2, 3, 4, 5], fps: 8 },
-  jump: { row: 3, frames: [0], fps: 1 },
+  jump: { row: 5, frames: [0, 1, 2, 3], fps: 8 },
 };
 
 export const foxAnimations = {
-  run: { row: 0, frames: [0, 1, 2, 3, 4, 5], fps: 9 },
-  flee: { row: 1, frames: [0, 1, 2, 3, 4, 5], fps: 12 },
+  stand: { row: 0, frames: [0, 1, 2, 3], fps: 4 },
+  run: { row: 2, frames: [0, 1, 2, 3, 4, 5], fps: 9 },
+  flee: { row: 4, frames: [0, 1, 2, 3, 4], fps: 11 },
 };
 
 export function drawFrame(ctx, sheet, animation, time, x, y, width, height, flip = false) {
