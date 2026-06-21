@@ -242,7 +242,9 @@ function drawHud(ctx, state) {
     ctx.textAlign = "center";
     drawCenteredLines(ctx, state.message, WORLD.width / 2, 220, 28);
     ctx.font = `10px ${FONT}`;
-    ctx.fillText("Join: Arrows, WASD, YGHJ, or PL;'", WORLD.width / 2, 294);
+    if (state.screen === "title") {
+      ctx.fillText("Join: Arrows, WASD, YGHJ, or PL;'", WORLD.width / 2, 294);
+    }
     ctx.textAlign = "left";
   }
 }
@@ -256,19 +258,19 @@ function drawCenteredLines(ctx, text, x, y, lineHeight) {
 }
 
 function drawTutorialText(ctx, state) {
-  if (state.phase !== 0 || state.screen !== "playing") {
+  if (!state.tutorial.active || state.screen !== "playing") {
     return;
   }
 
   ctx.fillStyle = "rgba(21, 24, 31, 0.82)";
-  ctx.fillRect(128, 86, 704, 46);
+  ctx.fillRect(84, 82, 792, 54);
   ctx.strokeStyle = "#f7e06e";
   ctx.lineWidth = 3;
-  ctx.strokeRect(128, 86, 704, 46);
+  ctx.strokeRect(84, 82, 792, 54);
   ctx.fillStyle = "#f7ead1";
   ctx.font = `10px ${FONT}`;
   ctx.textAlign = "center";
-  ctx.fillText(state.tutorial.text, WORLD.width / 2, 115);
+  drawCenteredLines(ctx, state.tutorial.text, WORLD.width / 2, 110, 17);
   ctx.textAlign = "left";
 }
 
