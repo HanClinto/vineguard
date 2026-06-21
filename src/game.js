@@ -567,9 +567,9 @@ export function createGame(input) {
     } else if (state.tutorial.touchedGrapeEarly && grape && grape.stage !== "ripe" && !state.tutorial.foxSpawned) {
       state.tutorial.text = "Those grapes need more time. Wait until they sparkle.";
     } else if (!state.tutorial.scaredFox && state.tutorial.foxSpawned && state.foxes.some((fox) => fox.state !== "fleeing")) {
-      state.tutorial.text = "A fox is coming! Run close to scare it away.";
+      state.tutorial.text = "The grapes are ripening, but a fox is coming! Run close to scare it away.";
     } else if (state.tutorial.scarePraiseTimer > 0) {
-      state.tutorial.text = "Good job! The fox dropped the grapes and ran away.";
+      state.tutorial.text = "Good job! The fox ran away.";
     } else if (grape && grape.stage !== "ripe" && !state.tutorial.harvested) {
       state.tutorial.text = "Protect the blossom while it grows into ripe grapes.";
     } else if (!state.tutorial.harvested) {

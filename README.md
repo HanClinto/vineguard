@@ -1,10 +1,20 @@
 # Vineguard
 
-Vineguard is a one-screen local couch co-op arcade game prototype inspired by Song of Solomon 2:15.
+_A fast-paced local multiplayer cooperative PvE harvest-and-defense action platformer with party-game pressure and light competitive stats._
+
+> "Catch the foxes for us, the little foxes that spoil the vineyards, for our vineyards are in blossom." - Song of Solomon 2:15
 
 Players protect a vineyard, harvest ripe grape clusters, carry them to a central winepress, and alternate jumps on pump platforms to fill the juice jar before foxes steal the crop.
 
+## Play Online
+
+Official deployment is hosted here on Github Pages:
+
+hanclinto.github.io/vineguard/
+
 ## Play Locally
+
+Can also download and run locally if you like:
 
 ```sh
 npm run serve
@@ -35,8 +45,4 @@ The project intentionally uses no build step. Source files are plain JavaScript 
 
 ## Credits
 
-Character, fox, and forest pixel art sprites are by Elthen and used under Elthen's Common Sense License 1.0. Credit is optional under the license, but appreciated by the artist.
-
-The included Elthen asset files are part of this game project and are not offered as standalone reusable asset packs. See the original license for full terms, including restrictions around redistribution, blockchain/crypto projects, and AI training.
-
-License reference: https://www.patreon.com/elthen/posts/licensing-27430241
+[Character](https://elthen.itch.io/pixel-art-adventurer-sprites), [fox](https://elthen.itch.io/2d-pixel-art-fox-sprites), and forest pixel art sprites are by Elthen and used under [Elthen's Common Sense License 1.0](https://www.patreon.com/elthen/posts/licensing-27430241).
