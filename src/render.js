@@ -1,4 +1,5 @@
 import { PLATFORMS, PRESS, WORLD } from "./config.js";
+import { drawFrame, foxAnimations, playerAnimations, sprites } from "./sprites.js";
 
 export function render(ctx, state) {
   ctx.clearRect(0, 0, WORLD.width, WORLD.height);
@@ -130,12 +131,27 @@ function drawPump(ctx, pump, offset, highlighted) {
 
 function drawFoxes(ctx, state) {
   for (const fox of state.foxes) {
-    ctx.fillStyle = fox.state === "fleeing" ? "#f0a15f" : "#d95f30";
-    ctx.fillRect(fox.x, fox.y, fox.width, fox.height);
-    ctx.fillStyle = "#f7ead1";
-    ctx.fillRect(fox.x + fox.width - 8, fox.y + 3, 8, 7);
-    ctx.fillStyle = "#7a2c1f";
-    ctx.fillRect(fox.x - 12, fox.y + 6, 14, 8);
+    const animation = fox.state === "fleeing" ? foxAnimations.flee : foxAnimations.run;
+    const drawn = drawFrame(
+      ctx,
+      sprites.fox,
+      animation,
+      fox.animationTime,
+      fox.x + fox.width / 2 - 24,
+      fox.y + fox.height / 2 - 28,
+      48,
+      48,
+      fox.facing < 0,
+    );
+
+    if (!drawn) {
+      ctx.fillStyle = fox.state === "fleeing" ? "#f0a15f" : "#d95f30";
+      ctx.fillRect(fox.x, fox.y, fox.width, fox.height);
+      ctx.fillStyle = "#f7ead1";
+      ctx.fillRect(fox.x + fox.width - 8, fox.y + 3, 8, 7);
+      ctx.fillStyle = "#7a2c1f";
+      ctx.fillRect(fox.x - 12, fox.y + 6, 14, 8);
+    }
 
     if (fox.target && !fox.carrying && fox.state !== "fleeing") {
       ctx.strokeStyle = "#f7e06e";
@@ -154,15 +170,43 @@ function drawFoxes(ctx, state) {
 
 function drawPlayers(ctx, state) {
   for (const player of state.players) {
-    ctx.fillStyle = player.color;
-    ctx.fillRect(player.x, player.y, player.width, player.height);
-    ctx.fillStyle = "#f7ead1";
-    ctx.fillRect(player.x + 6, player.y + 7, 12, 5);
+    const sheet = sprites.players[player.id - 1];
+    const animation = getPlayerAnimation(player);
+    const drawn = drawFrame(
+      ctx,
+      sheet,
+      animation,
+      player.animationTime,
+      player.x + player.width / 2 - 24,
+      player.y + player.height - 48,
+      48,
+      48,
+      player.facing < 0,
+    );
+
+    if (!drawn) {
+      ctx.fillStyle = player.color;
+      ctx.fillRect(player.x, player.y, player.width, player.height);
+      ctx.fillStyle = "#f7ead1";
+      ctx.fillRect(player.x + 6, player.y + 7, 12, 5);
+    }
 
     if (player.carrying) {
       drawCluster(ctx, player.x + player.width / 2, player.y - 14, "#7432a8", 5);
     }
   }
+}
+
+function getPlayerAnimation(player) {
+  if (!player.onGround) {
+    return playerAnimations.jump;
+  }
+
+  if (Math.abs(player.vx) > 1) {
+    return playerAnimations.run;
+  }
+
+  return playerAnimations.idle;
 }
 
 function drawParticles(ctx, state) {

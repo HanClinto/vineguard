@@ -92,6 +92,8 @@ export function createGame(input) {
       vx: 0,
       vy: 0,
       color: PLAYER_COLORS[playerNumber],
+      facing: 1,
+      animationTime: 0,
       onGround: false,
       groundPlatform: null,
       dropTimer: 0,
@@ -125,6 +127,8 @@ export function createGame(input) {
       player.y = WORLD.floorY - PLAYER_HEIGHT;
       player.vx = 0;
       player.vy = 0;
+      player.facing = 1;
+      player.animationTime = 0;
       player.onGround = false;
       player.groundPlatform = null;
       player.dropTimer = 0;
@@ -153,6 +157,11 @@ export function createGame(input) {
       const controls = CONTROL_SETS[player.controlIndex];
       const move = Number(input.isDown(controls.right)) - Number(input.isDown(controls.left));
       player.vx = move * 220;
+      player.animationTime += delta;
+
+      if (move !== 0) {
+        player.facing = move;
+      }
 
       if (player.dropTimer > 0) {
         player.dropTimer = Math.max(0, player.dropTimer - delta);
@@ -172,18 +181,20 @@ export function createGame(input) {
         player.wasAirborne = true;
       }
 
+      const previousY = player.y;
       player.vy += WORLD.gravity * delta;
       player.x += player.vx * delta;
       player.y += player.vy * delta;
       player.x = clamp(player.x, 8, WORLD.width - player.width - 8);
 
-      resolvePlatformCollisions(player);
+      resolvePlatformCollisions(player, previousY);
+      recoverPlayerIfOutOfBounds(player);
       tryHarvestOrDeposit(player);
       scareFoxes(player);
     }
   }
 
-  function resolvePlatformCollisions(player) {
+  function resolvePlatformCollisions(player, previousY) {
     player.onGround = false;
     player.groundPlatform = null;
 
@@ -192,7 +203,7 @@ export function createGame(input) {
         continue;
       }
 
-      const previousBottom = player.y + player.height - player.vy / 60;
+      const previousBottom = previousY + player.height;
       const bottom = player.y + player.height;
       const overlapsX = player.x + player.width > platform.x && player.x < platform.x + platform.width;
 
@@ -213,6 +224,17 @@ export function createGame(input) {
     } else if (Math.abs(player.vy) > 20) {
       player.wasAirborne = true;
     }
+  }
+
+  function recoverPlayerIfOutOfBounds(player) {
+    if (player.y < WORLD.height + 120) {
+      return;
+    }
+
+    player.y = WORLD.floorY - player.height;
+    player.vy = 0;
+    player.onGround = true;
+    player.groundPlatform = PLATFORMS[0];
   }
 
   function getAllPlatforms() {
@@ -325,15 +347,20 @@ export function createGame(input) {
     }
 
     for (const fox of state.foxes) {
+      fox.animationTime += delta;
+
       if (fox.state === "fleeing") {
         fox.x += fox.escapeDirection * fox.speed * 1.35 * delta;
+        fox.facing = fox.escapeDirection;
       } else if (fox.carrying) {
         fox.x += fox.escapeDirection * fox.speed * delta;
+        fox.facing = fox.escapeDirection;
         fox.carrying.x = fox.x + FOX_WIDTH / 2;
         fox.carrying.y = fox.y - 8;
       } else if (fox.target) {
         const direction = Math.sign(fox.target.x - centerX(fox)) || 1;
         fox.x += direction * fox.speed * delta;
+        fox.facing = direction;
 
         if (foxCanReachGrape(fox, fox.target) && canFoxSteal(fox.target)) {
           fox.carrying = fox.target;
@@ -373,6 +400,8 @@ export function createGame(input) {
       escapeDirection: fromLeft ? -1 : 1,
       speed: 95 + state.phase * 12,
       state: "seeking",
+      facing: fromLeft ? 1 : -1,
+      animationTime: 0,
     });
   }
 

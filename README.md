@@ -32,3 +32,11 @@ npm run check
 ```
 
 The project intentionally uses no build step. Source files are plain JavaScript modules loaded directly by the browser.
+
+## Credits
+
+Character, fox, and forest pixel art sprites are by Elthen and used under Elthen's Common Sense License 1.0. Credit is optional under the license, but appreciated by the artist.
+
+The included Elthen asset files are part of this game project and are not offered as standalone reusable asset packs. See the original license for full terms, including restrictions around redistribution, blockchain/crypto projects, and AI training.
+
+License reference: https://www.patreon.com/elthen/posts/licensing-27430241
