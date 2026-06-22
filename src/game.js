@@ -35,6 +35,7 @@ export function createGame(input, options = {}) {
       skipTutorial: Boolean(options.skipTutorial),
     },
     run: createRunState(),
+    round: createRoundStats(),
     bestRun: loadBestRun(),
     controls: input.getControlSets(),
   };
@@ -133,6 +134,8 @@ export function createGame(input, options = {}) {
     state.grapes = isTutorialRound()
       ? [createGrape(GRAPE_SITES[2], 0)]
       : GRAPE_SITES.slice(0, grapeCountForPhase(state.phase)).map(createGrape);
+    state.round = createRoundStats(state.grapes.length);
+    state.run.planted += state.round.planted;
     state.foxes = [];
     state.particles = [];
     state.foxSpawnTimer = isTutorialRound() ? 999 : foxDelayForPhase(state.phase);
@@ -455,6 +458,11 @@ export function createGame(input, options = {}) {
       if (fox.carrying && (fox.x < -60 || fox.x > WORLD.width + 60)) {
         fox.carrying.gone = true;
         fox.carrying.stolenBy = null;
+        fox.carrying = null;
+        fox.target = null;
+        fox.state = "fleeing";
+        state.round.stolen += 1;
+        state.run.stolen += 1;
       }
     }
 
@@ -591,6 +599,8 @@ export function createGame(input, options = {}) {
       state.tutorial.text = "Carry the grapes to the glowing winepress vat.";
     } else if (!state.tutorial.pumped) {
       state.tutorial.text = "Jump onto either pump platform to start pressing.";
+    } else if (state.winepress.loaded && state.winepress.strokes >= PRESS.requiredStrokes / 2) {
+      state.tutorial.text = "This is much easier with 2+ people working together.";
     } else {
       state.tutorial.text = "Alternate left and right pump landings to fill the juice jar.";
     }
@@ -636,10 +646,11 @@ export function createGame(input, options = {}) {
     return {
       title: `Phase ${state.phase} complete`,
       lines: [
-        `Run juice: ${state.run.totalJuice}`,
+        `Harvested ${state.juice}/${state.round.planted} planted`,
+        `Stolen this phase: ${state.round.stolen}`,
+        `Run: ${state.run.totalJuice} juice | ${state.run.stolen} stolen`,
         `Next: Phase ${nextPhase}`,
         `${grapeCountForPhase(nextPhase)} vines | Goal ${goalForPhase(nextPhase)}`,
-        `Fox pace: ${foxPaceLabel(nextPhase)}`,
       ],
     };
   }
@@ -649,7 +660,8 @@ export function createGame(input, options = {}) {
       title: "Harvest ended",
       lines: [
         `Reached phase ${state.phase}`,
-        `Run juice: ${state.run.totalJuice}`,
+        `Run: ${state.run.totalJuice} juice | ${state.run.planted} planted`,
+        `Stolen by foxes: ${state.run.stolen}`,
         `Best: phase ${state.bestRun.phase}, juice ${state.bestRun.juice}`,
         "Press R to restart",
       ],
@@ -742,8 +754,17 @@ export function createGame(input, options = {}) {
 function createRunState() {
   return {
     totalJuice: 0,
+    planted: 0,
+    stolen: 0,
     bestPhase: 0,
     playerCount: 0,
+  };
+}
+
+function createRoundStats(planted = 0) {
+  return {
+    planted,
+    stolen: 0,
   };
 }
 

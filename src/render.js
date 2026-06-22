@@ -242,9 +242,9 @@ function drawHud(ctx, state) {
     ctx.textAlign = "center";
     if (state.transition) {
       ctx.font = `18px ${FONT}`;
-      ctx.fillText(state.transition.title, WORLD.width / 2, 176);
+      ctx.fillText(state.transition.title, WORLD.width / 2, 160);
       ctx.font = `10px ${FONT}`;
-      drawCenteredLines(ctx, state.transition.lines.join("\n"), WORLD.width / 2, 236, 25);
+      drawCenteredLines(ctx, state.transition.lines.join("\n"), WORLD.width / 2, 246, 24);
     } else {
       ctx.font = `18px ${FONT}`;
       drawCenteredLines(ctx, state.message, WORLD.width / 2, 220, 28);
@@ -284,7 +284,7 @@ function drawTutorialText(ctx, state) {
 }
 
 function drawJuiceJar(ctx, state) {
-  const x = 742;
+  const x = 610;
   const y = 27;
   ctx.strokeStyle = "#f7ead1";
   ctx.lineWidth = 3;
@@ -303,7 +303,7 @@ function drawBestRun(ctx, state) {
 
   ctx.fillStyle = "#f7ead1";
   ctx.font = `7px ${FONT}`;
-  ctx.fillText(`Best P${state.bestRun.players}: phase ${state.bestRun.phase}, juice ${state.bestRun.juice}`, 742, 67);
+  ctx.fillText(`Best P${state.bestRun.players}: phase ${state.bestRun.phase}, juice ${state.bestRun.juice}`, 610, 67);
 }
 
 function drawPlayerStatus(ctx, state) {

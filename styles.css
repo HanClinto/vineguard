@@ -27,6 +27,7 @@ body {
   position: relative;
   width: min(100vw, calc(100vh * 16 / 9));
   aspect-ratio: 16 / 9;
+  container-type: size;
 }
 
 .game-shell {
@@ -45,18 +46,18 @@ canvas {
 
 .toolbar {
   position: absolute;
-  bottom: 10px;
-  right: 10px;
+  top: 3.333cqh;
+  right: 1.875cqw;
   z-index: 2;
 }
 
 button {
   border: 2px solid #f7ead1;
   border-radius: 4px;
-  padding: 8px 10px;
+  padding: clamp(4px, 0.833cqw, 8px) clamp(5px, 1.042cqw, 10px);
   background: rgba(21, 24, 31, 0.9);
   color: #f7ead1;
-  font: 10px/1 "Press Start 2P", ui-monospace, monospace;
+  font: clamp(7px, 1.042cqw, 10px)/1 "Press Start 2P", ui-monospace, monospace;
   cursor: pointer;
 }
 
@@ -68,17 +69,27 @@ input:focus-visible {
 
 .options-panel {
   position: absolute;
-  bottom: 50px;
-  right: 10px;
+  top: 13.889cqh;
+  right: 1.875cqw;
   z-index: 3;
-  width: min(390px, calc(100% - 20px));
-  max-height: calc(100% - 64px);
+  width: min(40.625cqw, calc(100% - 3.75cqw));
+  max-height: calc(100% - 14.259cqh);
   overflow: auto;
   border: 3px solid #f7e06e;
   border-radius: 6px;
-  padding: 12px;
+  padding: clamp(8px, 1.25cqw, 12px);
   background: rgba(21, 24, 31, 0.94);
   box-shadow: 0 10px 24px rgba(0, 0, 0, 0.42);
+}
+
+#options-toggle {
+  display: grid;
+  place-items: center;
+  width: 3.542cqw;
+  height: 6.296cqh;
+  padding: 0;
+  font-size: 1.875cqw;
+  line-height: 1;
 }
 
 .check-row {
