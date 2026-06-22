@@ -46,7 +46,7 @@ canvas {
 
 .toolbar {
   position: absolute;
-  top: 3.333cqh;
+  top: 4.815cqh;
   right: 1.875cqw;
   z-index: 2;
 }
@@ -87,9 +87,28 @@ input:focus-visible {
   place-items: center;
   width: 3.542cqw;
   height: 6.296cqh;
+  border-width: clamp(1px, 0.208cqw, 2px);
+  border-color: rgba(247, 234, 209, 0.72);
+  border-radius: clamp(2px, 0.417cqw, 4px);
   padding: 0;
-  font-size: 1.875cqw;
+  background: rgba(21, 24, 31, 0.68);
+  color: transparent;
+  font-size: 0;
   line-height: 1;
+}
+
+#options-toggle::before {
+  content: "\2699";
+  color: #f7ead1;
+  font-family: ui-sans-serif, system-ui, sans-serif;
+  font-size: 1.667cqw;
+  line-height: 1;
+  transform: translateY(-0.04em);
+}
+
+#options-toggle:hover {
+  border-color: #f7e06e;
+  background: rgba(21, 24, 31, 0.88);
 }
 
 .check-row {
