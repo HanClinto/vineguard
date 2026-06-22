@@ -5,8 +5,9 @@ const PLAYER_HEIGHT = 34;
 const FOX_WIDTH = 34;
 const FOX_HEIGHT = 18;
 const GRAPE_STAGGER_SECONDS = 1.55;
+const BEST_RUN_KEY = "vineguard.bestRun";
 
-export function createGame(input) {
+export function createGame(input, options = {}) {
   const state = {
     screen: "title",
     phase: 1,
@@ -29,9 +30,18 @@ export function createGame(input) {
     foxSpawnTimer: 4,
     roundOverTimer: 0,
     tutorial: createTutorialState(),
+    transition: null,
+    options: {
+      skipTutorial: Boolean(options.skipTutorial),
+    },
+    run: createRunState(),
+    bestRun: loadBestRun(),
+    controls: input.getControlSets(),
   };
 
   function update(delta) {
+    state.controls = input.getControlSets();
+
     for (const controlIndex of input.consumeJoins()) {
       joinPlayer(controlIndex);
     }
@@ -44,7 +54,6 @@ export function createGame(input) {
       state.roundOverTimer -= delta;
       if (state.roundOverTimer <= 0) {
         state.phase += 1;
-        state.juiceGoal = Math.min(3 + state.phase, 10);
         startRound();
       }
       updateParticles(delta);
@@ -55,7 +64,7 @@ export function createGame(input) {
     if (state.screen === "gameOver") {
       if (input.wasPressed("KeyR")) {
         state.phase = 1;
-        state.juiceGoal = 3;
+        state.run = createRunState();
         startRound();
       }
       updateParticles(delta);
@@ -81,11 +90,16 @@ export function createGame(input) {
       return;
     }
 
+    if (state.players.length >= PLAYER_COLORS.length) {
+      return;
+    }
+
     const playerNumber = state.players.length;
+    const controls = controlFor(controlIndex);
     state.players.push({
       id: playerNumber + 1,
       controlIndex,
-      controlName: CONTROL_SETS[controlIndex].name,
+      controlName: controls.name,
       x: 420 + playerNumber * 34,
       y: WORLD.floorY - PLAYER_HEIGHT,
       width: PLAYER_WIDTH,
@@ -106,21 +120,23 @@ export function createGame(input) {
         pumpStrokes: 0,
       },
     });
+    state.run.playerCount = Math.max(state.run.playerCount, state.players.length);
   }
 
   function startRound() {
     state.screen = "playing";
     state.juice = 0;
-    state.message = isTutorialRound() ? "Tutorial" : `Phase ${difficultyPhase()}`;
+    state.message = isTutorialRound() ? "Tutorial" : `Phase ${state.phase}`;
+    state.transition = null;
     state.tutorial = createTutorialState();
     state.tutorial.active = isTutorialRound();
     state.grapes = isTutorialRound()
       ? [createGrape(GRAPE_SITES[2], 0)]
-      : GRAPE_SITES.slice(0, Math.min(4 + difficultyPhase(), GRAPE_SITES.length)).map(createGrape);
+      : GRAPE_SITES.slice(0, grapeCountForPhase(state.phase)).map(createGrape);
     state.foxes = [];
     state.particles = [];
-    state.foxSpawnTimer = isTutorialRound() ? 999 : Math.max(1.4, 4.2 - difficultyPhase() * 0.35);
-    state.juiceGoal = isTutorialRound() ? 1 : Math.min(3 + difficultyPhase(), 10);
+    state.foxSpawnTimer = isTutorialRound() ? 999 : foxDelayForPhase(state.phase);
+    state.juiceGoal = goalForPhase(state.phase);
     state.winepress.loaded = null;
     state.winepress.strokes = 0;
     state.winepress.leftOffset = 0;
@@ -171,11 +187,7 @@ export function createGame(input) {
   }
 
   function isTutorialRound() {
-    return state.phase === 1;
-  }
-
-  function difficultyPhase() {
-    return Math.max(1, state.phase - 1);
+    return isTutorialPhase(state.phase);
   }
 
   function updatePlayers(delta) {
@@ -184,7 +196,7 @@ export function createGame(input) {
     updateTutorialTimers(delta);
 
     for (const player of state.players) {
-      const controls = CONTROL_SETS[player.controlIndex];
+      const controls = controlFor(player.controlIndex);
       const move = Number(input.isDown(controls.right)) - Number(input.isDown(controls.left));
       player.vx = move * 220;
       player.animationTime += delta;
@@ -333,6 +345,7 @@ export function createGame(input) {
 
     if (state.winepress.strokes >= PRESS.requiredStrokes) {
       state.juice += 1;
+      state.run.totalJuice += 1;
       state.winepress.loaded = null;
       state.winepress.strokes = 0;
       burst(PRESS.vat.x + PRESS.vat.width / 2, PRESS.vat.y - 8, "#7a2e70", 18);
@@ -403,7 +416,7 @@ export function createGame(input) {
       state.foxSpawnTimer -= delta;
       if (state.foxSpawnTimer <= 0) {
         spawnFox();
-        state.foxSpawnTimer = Math.max(1.1, 4 - state.phase * 0.3 + Math.random() * 1.2);
+        state.foxSpawnTimer = Math.max(1.1, foxDelayForPhase(state.phase) - 0.2 + Math.random() * 1.2);
       }
     }
 
@@ -557,7 +570,7 @@ export function createGame(input) {
   }
 
   function updateTutorialText() {
-    const controls = state.players[0] ? CONTROL_SETS[state.players[0].controlIndex] : CONTROL_SETS[1];
+    const controls = state.players[0] ? controlFor(state.players[0].controlIndex) : controlFor(1);
     const grape = state.grapes[0];
 
     if (state.players.length === 0) {
@@ -598,8 +611,12 @@ export function createGame(input) {
 
     if (state.juice >= state.juiceGoal) {
       state.screen = "roundWon";
-      state.roundOverTimer = 2.4;
-      state.message = `Phase ${difficultyPhase()} complete`;
+      state.roundOverTimer = 4.2;
+      state.run.bestPhase = Math.max(state.run.bestPhase, state.phase);
+      saveBestRun(state.run);
+      state.bestRun = loadBestRun();
+      state.transition = createRoundTransition();
+      state.message = state.transition.title;
       return;
     }
 
@@ -607,8 +624,72 @@ export function createGame(input) {
     const carriedGrapes = state.players.some((player) => player.carrying) || state.winepress.loaded;
     if (!usefulGrapes && !carriedGrapes) {
       state.screen = "gameOver";
-      state.message = `Your vineyard lost too many grapes\nthis harvest.\nNeeded ${state.juiceGoal} grapes, harvested ${state.juice}.\nPress R to restart.`;
+      saveBestRun(state.run);
+      state.bestRun = loadBestRun();
+      state.transition = createGameOverTransition();
+      state.message = state.transition.title;
     }
+  }
+
+  function createRoundTransition() {
+    const nextPhase = state.phase + 1;
+    return {
+      title: `Phase ${state.phase} complete`,
+      lines: [
+        `Run juice: ${state.run.totalJuice}`,
+        `Next: Phase ${nextPhase}`,
+        `${grapeCountForPhase(nextPhase)} vines | Goal ${goalForPhase(nextPhase)}`,
+        `Fox pace: ${foxPaceLabel(nextPhase)}`,
+      ],
+    };
+  }
+
+  function createGameOverTransition() {
+    return {
+      title: "Harvest ended",
+      lines: [
+        `Reached phase ${state.phase}`,
+        `Run juice: ${state.run.totalJuice}`,
+        `Best: phase ${state.bestRun.phase}, juice ${state.bestRun.juice}`,
+        "Press R to restart",
+      ],
+    };
+  }
+
+  function isTutorialPhase(phase) {
+    return phase === 1 && !state.options.skipTutorial;
+  }
+
+  function grapeCountForPhase(phase) {
+    return isTutorialPhase(phase) ? 1 : Math.min(4 + phase, GRAPE_SITES.length);
+  }
+
+  function goalForPhase(phase) {
+    return isTutorialPhase(phase) ? 1 : Math.min(3 + phase, 10);
+  }
+
+  function foxDelayForPhase(phase) {
+    return Math.max(1.4, 4.2 - phase * 0.35);
+  }
+
+  function foxPaceLabel(phase) {
+    if (phase >= 6) {
+      return "wild";
+    }
+
+    if (phase >= 3) {
+      return "quick";
+    }
+
+    return "steady";
+  }
+
+  function controlFor(controlIndex) {
+    return input.getControlSet(controlIndex) || CONTROL_SETS[controlIndex];
+  }
+
+  function setSkipTutorial(skipTutorial) {
+    state.options.skipTutorial = Boolean(skipTutorial);
   }
 
   function updateParticles(delta) {
@@ -646,6 +727,7 @@ export function createGame(input) {
       spawnFox,
       pump,
       canFoxSteal,
+      setSkipTutorial,
       setGrapeStage(id, stage) {
         const grape = state.grapes.find((item) => item.id === id);
         if (grape) {
@@ -655,6 +737,50 @@ export function createGame(input) {
       },
     },
   };
+}
+
+function createRunState() {
+  return {
+    totalJuice: 0,
+    bestPhase: 0,
+    playerCount: 0,
+  };
+}
+
+function loadBestRun() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(BEST_RUN_KEY) || "null");
+    if (!saved || typeof saved !== "object") {
+      return { phase: 0, juice: 0, players: 0 };
+    }
+
+    return {
+      phase: Number(saved.phase) || 0,
+      juice: Number(saved.juice) || 0,
+      players: Number(saved.players) || 0,
+    };
+  } catch {
+    return { phase: 0, juice: 0, players: 0 };
+  }
+}
+
+function saveBestRun(run) {
+  const current = loadBestRun();
+  const candidate = {
+    phase: run.bestPhase,
+    juice: run.totalJuice,
+    players: run.playerCount,
+  };
+
+  if (candidate.phase < current.phase || (candidate.phase === current.phase && candidate.juice <= current.juice)) {
+    return;
+  }
+
+  try {
+    localStorage.setItem(BEST_RUN_KEY, JSON.stringify(candidate));
+  } catch {
+    // The game remains playable if storage is unavailable.
+  }
 }
 
 function overlaps(a, b) {

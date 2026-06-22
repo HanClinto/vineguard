@@ -232,15 +232,24 @@ function drawHud(ctx, state) {
 
   drawJuiceJar(ctx, state);
   drawPlayerStatus(ctx, state);
+  drawBestRun(ctx, state);
   drawTutorialText(ctx, state);
 
   if (state.screen !== "playing") {
     ctx.fillStyle = "rgba(21, 24, 31, 0.68)";
     ctx.fillRect(0, 0, WORLD.width, WORLD.height);
     ctx.fillStyle = "#f7ead1";
-    ctx.font = `18px ${FONT}`;
     ctx.textAlign = "center";
-    drawCenteredLines(ctx, state.message, WORLD.width / 2, 220, 28);
+    if (state.transition) {
+      ctx.font = `18px ${FONT}`;
+      ctx.fillText(state.transition.title, WORLD.width / 2, 176);
+      ctx.font = `10px ${FONT}`;
+      drawCenteredLines(ctx, state.transition.lines.join("\n"), WORLD.width / 2, 236, 25);
+    } else {
+      ctx.font = `18px ${FONT}`;
+      drawCenteredLines(ctx, state.message, WORLD.width / 2, 220, 28);
+    }
+
     ctx.font = `10px ${FONT}`;
     if (state.screen === "title") {
       ctx.fillText("Join: Arrows, WASD, YGHJ, or PL;'", WORLD.width / 2, 294);
@@ -287,14 +296,25 @@ function drawJuiceJar(ctx, state) {
   ctx.fillText(`Juice ${state.juice}/${state.juiceGoal}`, x + 134, y + 19);
 }
 
+function drawBestRun(ctx, state) {
+  if (!state.bestRun || state.bestRun.phase === 0) {
+    return;
+  }
+
+  ctx.fillStyle = "#f7ead1";
+  ctx.font = `7px ${FONT}`;
+  ctx.fillText(`Best P${state.bestRun.players}: phase ${state.bestRun.phase}, juice ${state.bestRun.juice}`, 742, 67);
+}
+
 function drawPlayerStatus(ctx, state) {
   let x = 250;
   for (const player of state.players) {
+    const controls = state.controls[player.controlIndex] || { name: player.controlName };
     ctx.fillStyle = player.color;
     ctx.fillRect(x, 31, 12, 12);
     ctx.fillStyle = "#f7ead1";
     ctx.font = `8px ${FONT}`;
-    ctx.fillText(`P${player.id} ${player.controlName}`, x + 17, 42);
+    ctx.fillText(`P${player.id} ${controls.name}`, x + 17, 42);
     x += 112;
   }
 }
