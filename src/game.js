@@ -6,6 +6,7 @@ const FOX_WIDTH = 34;
 const FOX_HEIGHT = 18;
 const GRAPE_STAGGER_SECONDS = 1.55;
 const BEST_RUN_KEY = "vineguard.bestRun";
+const FOX_ENTRY_OFFSETS = [-86, -52, -24, 24, 52, 86];
 
 export function createGame(input, options = {}) {
   const state = {
@@ -440,6 +441,8 @@ export function createGame(input, options = {}) {
           continue;
         }
 
+        fox.targetY = foxLaneY(fox.target);
+        fox.y = approach(fox.y, fox.targetY, fox.verticalSpeed * delta);
         const direction = Math.sign(fox.target.x - centerX(fox)) || 1;
         fox.x += direction * fox.speed * delta;
         fox.facing = direction;
@@ -487,15 +490,19 @@ export function createGame(input, options = {}) {
 
     const fromLeft = forcedFromLeft ?? Math.random() < 0.5;
     const target = candidates[Math.floor(Math.random() * candidates.length)];
+    const targetY = foxLaneY(target);
+    const entryY = forcedFromLeft === null ? foxEntryY(targetY) : targetY;
     state.foxes.push({
       x: fromLeft ? -FOX_WIDTH : WORLD.width + FOX_WIDTH,
-      y: foxLaneY(target),
+      y: entryY,
       width: FOX_WIDTH,
       height: FOX_HEIGHT,
       target,
+      targetY,
       carrying: null,
       escapeDirection: fromLeft ? -1 : 1,
       speed: 95 + state.phase * 12,
+      verticalSpeed: 70 + state.phase * 5,
       state: "seeking",
       facing: fromLeft ? 1 : -1,
       animationTime: 0,
@@ -506,7 +513,7 @@ export function createGame(input, options = {}) {
     const candidates = state.grapes.filter((grape) => canFoxSteal(grape));
     if (candidates.length > 0) {
       fox.target = closestGrape(fox, candidates);
-      fox.y = foxLaneY(fox.target);
+      fox.targetY = foxLaneY(fox.target);
       return;
     }
 
@@ -538,6 +545,11 @@ export function createGame(input, options = {}) {
 
   function foxLaneY(grape) {
     return clamp(grape.y + 14, 110, WORLD.floorY - FOX_HEIGHT);
+  }
+
+  function foxEntryY(targetY) {
+    const offset = FOX_ENTRY_OFFSETS[Math.floor(Math.random() * FOX_ENTRY_OFFSETS.length)];
+    return clamp(targetY + offset, 96, WORLD.floorY - FOX_HEIGHT);
   }
 
   function scareFoxes(player) {

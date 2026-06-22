@@ -159,7 +159,7 @@ function drawFoxes(ctx, state) {
       ctx.strokeStyle = "#f7e06e";
       ctx.lineWidth = 2;
       ctx.beginPath();
-      ctx.moveTo(fox.x + fox.width / 2, fox.y);
+      ctx.moveTo(fox.x + fox.width / 2, fox.y + fox.height / 2);
       ctx.lineTo(fox.target.x, fox.target.y - 18);
       ctx.stroke();
     }
