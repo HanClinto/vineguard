@@ -141,6 +141,11 @@ function drawPump(ctx, pump, offset, highlighted) {
 function drawFoxes(ctx, state) {
   for (const fox of state.foxes) {
     const animation = fox.state === "fleeing" ? foxAnimations.flee : foxAnimations.run;
+    ctx.save();
+    if (fox.state === "fleeing") {
+      ctx.globalAlpha = 0.75;
+    }
+
     const drawn = drawFrame(
       ctx,
       sprites.fox,
@@ -161,6 +166,8 @@ function drawFoxes(ctx, state) {
       ctx.fillStyle = "#7a2c1f";
       ctx.fillRect(fox.x - 12, fox.y + 6, 14, 8);
     }
+
+    ctx.restore();
 
     if (fox.target && !fox.carrying && fox.state !== "fleeing") {
       ctx.strokeStyle = "#f7e06e";

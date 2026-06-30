@@ -4,6 +4,22 @@ const PLAYER_WIDTH = 24;
 const PLAYER_HEIGHT = 34;
 const FOX_WIDTH = 34;
 const FOX_HEIGHT = 18;
+const PLAYER_RUN_SPEED = 220;
+const PLAYER_GROUND_ACCEL = 2500;
+const PLAYER_AIR_ACCEL = 1450;
+const PLAYER_GROUND_FRICTION = 3000;
+const PLAYER_AIR_FRICTION = 720;
+const PLAYER_JUMP_SPEED = -650;
+const PLAYER_JUMP_CUT_SPEED = -260;
+const PLAYER_COYOTE_SECONDS = 0.1;
+const PLAYER_JUMP_BUFFER_SECONDS = 0.12;
+const PLAYER_ASCEND_GRAVITY = 1550;
+const PLAYER_RELEASE_GRAVITY = 2700;
+const PLAYER_FALL_GRAVITY = 2250;
+const PLAYER_FAST_FALL_GRAVITY = 3300;
+const PLAYER_MAX_FALL_SPEED = 880;
+const PLAYER_FAST_FALL_SPEED = 1120;
+const FOX_SWEAT_INTERVAL = 0.16;
 const HIGH_SCORES_KEY = "vineguard.highScores";
 const OLD_DEFAULT_HIGH_SCORE_NAMES = new Set([
   "David Jonathan",
@@ -110,6 +126,9 @@ export function createGame(input, options = {}) {
       onGround: false,
       groundPlatform: null,
       dropTimer: 0,
+      coyoteTimer: 0,
+      jumpBufferTimer: 0,
+      wasJumpHeld: false,
       wasAirborne: true,
       carrying: null,
       stats: {
@@ -168,6 +187,9 @@ export function createGame(input, options = {}) {
       player.onGround = false;
       player.groundPlatform = null;
       player.dropTimer = 0;
+      player.coyoteTimer = 0;
+      player.jumpBufferTimer = 0;
+      player.wasJumpHeld = false;
     }
 
     for (let index = 0; index < state.parameters.startingGrapes; index += 1) {
@@ -213,8 +235,28 @@ export function createGame(input, options = {}) {
     for (const player of state.players) {
       const controls = controlFor(player.controlIndex);
       const move = Number(input.isDown(controls.right)) - Number(input.isDown(controls.left));
-      player.vx = move * 220;
+      const jumpHeld = input.isDown(controls.jump);
+      const jumpReleased = player.wasJumpHeld && !jumpHeld;
+      const downHeld = input.isDown(controls.down);
+      const targetVx = move * PLAYER_RUN_SPEED;
+      const acceleration = player.onGround ? PLAYER_GROUND_ACCEL : PLAYER_AIR_ACCEL;
+      const friction = player.onGround ? PLAYER_GROUND_FRICTION : PLAYER_AIR_FRICTION;
+      player.vx = move === 0
+        ? approach(player.vx, 0, friction * delta)
+        : approach(player.vx, targetVx, acceleration * delta);
       player.animationTime += delta;
+
+      if (player.onGround) {
+        player.coyoteTimer = PLAYER_COYOTE_SECONDS;
+      } else {
+        player.coyoteTimer = Math.max(0, player.coyoteTimer - delta);
+      }
+
+      if (input.wasPressed(controls.jump)) {
+        player.jumpBufferTimer = PLAYER_JUMP_BUFFER_SECONDS;
+      } else {
+        player.jumpBufferTimer = Math.max(0, player.jumpBufferTimer - delta);
+      }
 
       if (move !== 0) {
         player.facing = move;
@@ -235,26 +277,45 @@ export function createGame(input, options = {}) {
         player.y += 5;
       }
 
-      if (input.wasPressed(controls.jump) && player.onGround) {
-        player.vy = -650;
+      if (player.jumpBufferTimer > 0 && player.coyoteTimer > 0) {
+        player.vy = PLAYER_JUMP_SPEED;
         player.onGround = false;
         player.wasAirborne = true;
+        player.coyoteTimer = 0;
+        player.jumpBufferTimer = 0;
         if (state.tutorial.active) {
           state.tutorial.moved = true;
         }
       }
 
+      if (jumpReleased && player.vy < PLAYER_JUMP_CUT_SPEED) {
+        player.vy = PLAYER_JUMP_CUT_SPEED;
+      }
+
       const previousY = player.y;
-      player.vy += WORLD.gravity * delta;
+      const maxFallSpeed = downHeld && !player.onGround ? PLAYER_FAST_FALL_SPEED : PLAYER_MAX_FALL_SPEED;
+      player.vy = Math.min(player.vy + playerGravity(player, jumpHeld, downHeld) * delta, maxFallSpeed);
       player.x += player.vx * delta;
       player.y += player.vy * delta;
       player.x = clamp(player.x, 8, WORLD.width - player.width - 8);
 
-      resolvePlatformCollisions(player, previousY);
+      const landingSpeed = resolvePlatformCollisions(player, previousY);
+      if (landingSpeed > 0) {
+        landingDust(player, landingSpeed);
+      }
       recoverPlayerIfOutOfBounds(player);
       tryHarvestOrDeposit(player);
       scareFoxes(player);
+      player.wasJumpHeld = jumpHeld;
     }
+  }
+
+  function playerGravity(player, jumpHeld, downHeld) {
+    if (player.vy < 0) {
+      return jumpHeld ? PLAYER_ASCEND_GRAVITY : PLAYER_RELEASE_GRAVITY;
+    }
+
+    return downHeld ? PLAYER_FAST_FALL_GRAVITY : PLAYER_FALL_GRAVITY;
   }
 
   function updateTutorialTimers(delta) {
@@ -266,6 +327,7 @@ export function createGame(input, options = {}) {
   }
 
   function resolvePlatformCollisions(player, previousY) {
+    let landingSpeed = 0;
     player.onGround = false;
     player.groundPlatform = null;
 
@@ -279,6 +341,9 @@ export function createGame(input, options = {}) {
       const overlapsX = player.x + player.width > platform.x && player.x < platform.x + platform.width;
 
       if (player.vy >= 0 && overlapsX && previousBottom <= platform.y && bottom >= platform.y) {
+        if (player.wasAirborne) {
+          landingSpeed = Math.max(landingSpeed, player.vy);
+        }
         player.y = platform.y - player.height;
         player.vy = 0;
         player.onGround = true;
@@ -294,6 +359,22 @@ export function createGame(input, options = {}) {
       player.wasAirborne = false;
     } else if (Math.abs(player.vy) > 20) {
       player.wasAirborne = true;
+    }
+
+    return landingSpeed;
+  }
+
+  function landingDust(player, landingSpeed) {
+    const count = landingSpeed > 520 ? 8 : 5;
+    for (let index = 0; index < count; index += 1) {
+      state.particles.push({
+        x: player.x + player.width / 2 + randomBetween(-10, 10),
+        y: player.y + player.height - 4,
+        vx: randomBetween(-52, 52),
+        vy: randomBetween(-72, -18),
+        life: randomBetween(0.18, 0.34),
+        color: "#d7b47a",
+      });
     }
   }
 
@@ -496,6 +577,11 @@ export function createGame(input, options = {}) {
       if (fox.state === "fleeing") {
         fox.x += fox.escapeDirection * fox.speed * 1.35 * delta;
         fox.facing = fox.escapeDirection;
+        fox.sweatTimer -= delta;
+        if (fox.sweatTimer <= 0) {
+          sweat(fox.x + FOX_WIDTH / 2, fox.y + 2);
+          fox.sweatTimer = FOX_SWEAT_INTERVAL;
+        }
       } else if (fox.carrying) {
         fox.x += fox.escapeDirection * fox.speed * delta;
         fox.facing = fox.escapeDirection;
@@ -571,6 +657,7 @@ export function createGame(input, options = {}) {
       state: "seeking",
       facing: fromLeft ? 1 : -1,
       animationTime: 0,
+      sweatTimer: FOX_SWEAT_INTERVAL,
     });
   }
 
@@ -585,6 +672,7 @@ export function createGame(input, options = {}) {
     fox.target = null;
     fox.state = "fleeing";
     fox.escapeDirection = centerX(fox) < WORLD.width / 2 ? -1 : 1;
+    fox.sweatTimer = 0;
   }
 
   function availableFoxTargets(ignoredFox = null) {
@@ -663,6 +751,7 @@ export function createGame(input, options = {}) {
 
       fox.state = "fleeing";
       fox.escapeDirection = fox.x < player.x ? -1 : 1;
+      fox.sweatTimer = 0;
       player.stats.foxesScared += 1;
       if (state.tutorial.active) {
         state.tutorial.scaredFox = true;
@@ -837,6 +926,17 @@ export function createGame(input, options = {}) {
         color,
       });
     }
+  }
+
+  function sweat(x, y) {
+    state.particles.push({
+      x: x + randomBetween(-5, 5),
+      y,
+      vx: randomBetween(-18, 18),
+      vy: randomBetween(-118, -74),
+      life: randomBetween(0.28, 0.48),
+      color: "#9be7ff",
+    });
   }
 
   return {
