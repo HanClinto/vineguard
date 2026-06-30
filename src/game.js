@@ -595,9 +595,12 @@ export function createGame(input, options = {}) {
 
         fox.targetY = foxLaneY(fox.target);
         fox.y = approach(fox.y, fox.targetY, fox.verticalSpeed * delta);
-        const direction = Math.sign(fox.target.x - centerX(fox)) || 1;
-        fox.x += direction * fox.speed * delta;
-        fox.facing = direction;
+        const targetDx = fox.target.x - centerX(fox);
+        if (Math.abs(targetDx) > 4) {
+          const direction = Math.sign(targetDx);
+          fox.x += direction * fox.speed * delta;
+          fox.facing = direction;
+        }
 
         if (foxCanReachGrape(fox, fox.target) && canFoxSteal(fox.target)) {
           fox.carrying = fox.target;
@@ -862,6 +865,7 @@ export function createGame(input, options = {}) {
     };
     state.highScores = saveHighScore(entry);
     state.pendingHighScore = null;
+    continueToTitle();
     return state.highScores;
   }
 
