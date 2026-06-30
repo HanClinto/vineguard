@@ -8,6 +8,11 @@ function image(src) {
 
 export const sprites = {
   frameSize: FRAME_SIZE,
+  grapes: {
+    blossom: image("src/assets/grapes_flower.png"),
+    unripe: image("src/assets/grapes_unripe.png"),
+    ripe: image("src/assets/grapes_ripe.png"),
+  },
   players: [
     image("src/assets/generated/player_1_male_red.png"),
     image("src/assets/generated/player_2_male_blue.png"),

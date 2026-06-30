@@ -61,16 +61,34 @@ function drawGrapes(ctx, state) {
     ctx.fillRect(grape.x - 20, grape.y - 30, 40, 5);
 
     if (grape.stage === "blossom") {
-      drawBlossom(ctx, grape.x, grape.y - 8);
+      drawGrapeSprite(ctx, sprites.grapes.blossom, grape.x, grape.y - 8, 32, () => {
+        drawBlossom(ctx, grape.x, grape.y - 8);
+      });
     } else if (grape.stage === "unripe") {
-      drawCluster(ctx, grape.x, grape.y - 8, "#77bf52", 5);
+      drawGrapeSprite(ctx, sprites.grapes.unripe, grape.x, grape.y - 8, 32, () => {
+        drawCluster(ctx, grape.x, grape.y - 8, "#77bf52", 5);
+      });
     } else {
       const pulse = Math.sin(grape.sparkle * 8) * 2;
-      drawCluster(ctx, grape.x, grape.y - 8 + pulse, "#7432a8", 7);
+      drawGrapeSprite(ctx, sprites.grapes.ripe, grape.x, grape.y - 8 + pulse, 32, () => {
+        drawCluster(ctx, grape.x, grape.y - 8 + pulse, "#7432a8", 7);
+      });
       ctx.strokeStyle = "#f7e06e";
       ctx.strokeRect(grape.x - 16, grape.y - 27 + pulse, 32, 32);
     }
   }
+}
+
+function drawGrapeSprite(ctx, sprite, x, y, size, fallback) {
+  if (!sprite.complete || sprite.naturalWidth === 0) {
+    fallback();
+    return;
+  }
+
+  ctx.save();
+  ctx.imageSmoothingEnabled = false;
+  ctx.drawImage(sprite, x - size / 2, y - size / 2, size, size);
+  ctx.restore();
 }
 
 function drawBlossom(ctx, x, y) {
@@ -186,7 +204,9 @@ function drawFoxes(ctx, state) {
     }
 
     if (fox.carrying) {
-      drawCluster(ctx, fox.x + fox.width / 2, fox.y - 8, "#7432a8", 4);
+      drawGrapeSprite(ctx, sprites.grapes.ripe, fox.x + fox.width / 2, fox.y - 8, 24, () => {
+        drawCluster(ctx, fox.x + fox.width / 2, fox.y - 8, "#7432a8", 4);
+      });
     }
   }
 }
@@ -216,7 +236,9 @@ function drawPlayers(ctx, state) {
     }
 
     if (player.carrying) {
-      drawCluster(ctx, player.x + player.width / 2, player.y - 14, "#7432a8", 5);
+      drawGrapeSprite(ctx, sprites.grapes.ripe, player.x + player.width / 2, player.y - 14, 28, () => {
+        drawCluster(ctx, player.x + player.width / 2, player.y - 14, "#7432a8", 5);
+      });
     }
   }
 }
