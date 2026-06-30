@@ -285,7 +285,7 @@ function drawGamePlayerSlots(ctx, state) {
     drawKeyPyramid(ctx, controls, controlState, x + 58, y + 9, active);
 
     if (active) {
-      drawTitlePlayer(ctx, player, x + 146, y + 11, state.titleTime + player.animationTime, controlState);
+      drawTitlePlayer(ctx, player, x + 146, y + 11, state.titleTime, controlState);
     } else {
       drawInactivePlayerSlot(ctx, x + 156, y + 12);
     }

@@ -100,6 +100,7 @@ export const DEFAULT_PARAMETERS = {
 
 export const DEFAULT_HIGH_SCORES = [
   { name: "Daniel", scoreMl: 900, players: 1, seconds: 55, stolen: 10 },
+  { name: "Jael", scoreMl: 800, players: 1, seconds: 50, stolen: 10 },
   { name: "Ruth", scoreMl: 700, players: 1, seconds: 45, stolen: 10 },
   { name: "David & Jonathan", scoreMl: 1600, players: 2, seconds: 70, stolen: 10 },
   { name: "Boanerges", scoreMl: 1500, players: 2, seconds: 68, stolen: 10 },
