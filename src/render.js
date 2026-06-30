@@ -2,6 +2,8 @@ import { PLATFORMS, PRESS, VERSES, WORLD } from "./config.js";
 import { drawFrame, foxAnimations, playerAnimations, sprites } from "./sprites.js";
 
 const FONT = '"Press Start 2P", monospace';
+const PLAYER_SPRITE_SIZE = 48;
+const PLAYER_SPRITE_CENTER_X = 14;
 
 export function render(ctx, state) {
   ctx.clearRect(0, 0, WORLD.width, WORLD.height);
@@ -188,16 +190,17 @@ function drawPlayers(ctx, state) {
   for (const player of state.players) {
     const sheet = sprites.players[player.id - 1];
     const animation = getPlayerAnimation(player);
+    const flip = player.facing < 0;
     const drawn = drawFrame(
       ctx,
       sheet,
       animation,
       player.animationTime,
-      player.x + player.width / 2 - 24,
-      player.y + player.height - 48,
-      48,
-      48,
-      player.facing < 0,
+      playerSpriteLeft(player.x + player.width / 2, flip),
+      player.y + player.height - PLAYER_SPRITE_SIZE,
+      PLAYER_SPRITE_SIZE,
+      PLAYER_SPRITE_SIZE,
+      flip,
     );
 
     if (!drawn) {
@@ -434,7 +437,17 @@ function drawTitlePlayer(ctx, player, x, y, time, controlState = {}) {
   const movingSideways = Boolean(controlState.left || controlState.right);
   const animation = controlState.jump ? playerAnimations.jump : movingSideways ? playerAnimations.run : playerAnimations.idle;
   const flip = controlState.left && !controlState.right;
-  const drawn = drawFrame(ctx, sheet, animation, time * (movingSideways ? 1.8 : 1), x - 12, y - 8, 48, 48, flip);
+  const drawn = drawFrame(
+    ctx,
+    sheet,
+    animation,
+    time * (movingSideways ? 1.8 : 1),
+    playerSpriteLeft(x + 12, flip),
+    y - 8,
+    PLAYER_SPRITE_SIZE,
+    PLAYER_SPRITE_SIZE,
+    flip,
+  );
 
   if (!drawn) {
     ctx.fillStyle = player.color;
@@ -442,6 +455,12 @@ function drawTitlePlayer(ctx, player, x, y, time, controlState = {}) {
     ctx.fillStyle = "#f7ead1";
     ctx.fillRect(x + 6, y + 7, 12, 5);
   }
+}
+
+function playerSpriteLeft(centerX, flip) {
+  const scale = PLAYER_SPRITE_SIZE / sprites.frameSize;
+  const sourceCenter = flip ? sprites.frameSize - PLAYER_SPRITE_CENTER_X : PLAYER_SPRITE_CENTER_X;
+  return Math.round(centerX - sourceCenter * scale);
 }
 
 function drawInactivePlayerSlot(ctx, x, y) {
