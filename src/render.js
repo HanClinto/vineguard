@@ -538,8 +538,21 @@ function drawTitleVines(ctx, time) {
   for (let index = 0; index < 18; index += 1) {
     const x = Math.round((110 + index * 44) / TITLE_PIXEL) * TITLE_PIXEL;
     const y = Math.round((164 + (index % 6) * 38 + Math.sin(time + index) * 3) / TITLE_PIXEL) * TITLE_PIXEL;
-    drawPixelCluster(ctx, x, y, index % 3 === 0 ? "#7432a8" : "#77bf52");
+    drawTitleGrape(ctx, x, y, index);
   }
+}
+
+function drawTitleGrape(ctx, x, y, index) {
+  const stage = index % 6 === 0 ? "blossom" : index % 3 === 0 ? "ripe" : "unripe";
+  const sprite = sprites.grapes[stage];
+  const size = stage === "blossom" ? 26 : 28;
+  drawGrapeSprite(ctx, sprite, x, y, size, () => {
+    if (stage === "blossom") {
+      drawBlossom(ctx, x, y);
+    } else {
+      drawPixelCluster(ctx, x, y, stage === "ripe" ? "#7432a8" : "#77bf52");
+    }
+  });
 }
 
 function drawPixelCluster(ctx, x, y, color) {
