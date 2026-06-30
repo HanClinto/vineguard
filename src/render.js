@@ -538,8 +538,8 @@ function drawPixelCluster(ctx, x, y, color) {
 }
 
 function drawTinyRoundedPixel(ctx, x, y, size) {
-  ctx.fillRect(x + 1, y, size - 2, size);
-  ctx.fillRect(x, y + 1, size, size - 2);
+  ctx.fillRect(x + TITLE_PIXEL, y, size - TITLE_PIXEL * 2, size);
+  ctx.fillRect(x, y + TITLE_PIXEL, size, size - TITLE_PIXEL * 2);
 }
 
 function drawRotatingVerse(ctx, state) {
