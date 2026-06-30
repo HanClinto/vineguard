@@ -5,6 +5,8 @@ export const WORLD = {
   gravity: 1900,
 };
 
+export const RENDER_SCALE = 4 / 3;
+
 export const PLAYER_COLORS = ["#e64b4b", "#4f8cff", "#f2c84b", "#58c878"];
 
 export const CONTROL_SETS = [

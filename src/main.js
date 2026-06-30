@@ -1,7 +1,7 @@
 import { createGame } from "./game.js";
 import { createInput } from "./input.js";
 import { render } from "./render.js";
-import { DEFAULT_PARAMETERS } from "./config.js";
+import { DEFAULT_PARAMETERS, WORLD } from "./config.js";
 
 const OPTIONS_KEY = "vineguard.options";
 const CONTROL_ACTIONS = ["left", "right", "jump", "down"];
@@ -268,8 +268,8 @@ function setupScoreTabs(game) {
 function canvasPoint(event) {
   const rect = canvas.getBoundingClientRect();
   return {
-    x: ((event.clientX - rect.left) / rect.width) * canvas.width,
-    y: ((event.clientY - rect.top) / rect.height) * canvas.height,
+    x: ((event.clientX - rect.left) / rect.width) * WORLD.width,
+    y: ((event.clientY - rect.top) / rect.height) * WORLD.height,
   };
 }
 

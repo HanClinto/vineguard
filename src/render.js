@@ -1,4 +1,4 @@
-import { PLATFORMS, PRESS, VERSES, WORLD } from "./config.js";
+import { PLATFORMS, PRESS, RENDER_SCALE, VERSES, WORLD } from "./config.js";
 import { drawFrame, foxAnimations, playerAnimations, sprites } from "./sprites.js";
 
 const FONT = '"Press Start 2P", monospace';
@@ -7,7 +7,11 @@ const PLAYER_SPRITE_CENTER_X = 14;
 const TITLE_PIXEL = 2;
 
 export function render(ctx, state) {
-  ctx.clearRect(0, 0, WORLD.width, WORLD.height);
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.imageSmoothingEnabled = false;
+  ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+  ctx.setTransform(RENDER_SCALE, 0, 0, RENDER_SCALE, 0, 0);
+  ctx.imageSmoothingEnabled = false;
 
   if (state.screen === "title") {
     drawTitleScreen(ctx, state);
