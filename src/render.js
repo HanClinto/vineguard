@@ -543,7 +543,8 @@ function drawTitleVines(ctx, time) {
 }
 
 function drawTitleGrape(ctx, x, y, index) {
-  const stage = index % 6 === 0 ? "blossom" : index % 3 === 0 ? "ripe" : "unripe";
+  const roll = seededTitleRandom(index);
+  const stage = roll < 0.18 ? "blossom" : roll < 0.5 ? "ripe" : "unripe";
   const sprite = sprites.grapes[stage];
   const size = stage === "blossom" ? 26 : 28;
   drawGrapeSprite(ctx, sprite, x, y, size, () => {
@@ -553,6 +554,11 @@ function drawTitleGrape(ctx, x, y, index) {
       drawPixelCluster(ctx, x, y, stage === "ripe" ? "#7432a8" : "#77bf52");
     }
   });
+}
+
+function seededTitleRandom(index) {
+  const value = Math.sin((index + 1) * 127.1) * 43758.5453123;
+  return value - Math.floor(value);
 }
 
 function drawPixelCluster(ctx, x, y, color) {
