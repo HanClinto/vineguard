@@ -4,6 +4,7 @@ import { drawFrame, foxAnimations, playerAnimations, sprites } from "./sprites.j
 const FONT = '"Press Start 2P", monospace';
 const PLAYER_SPRITE_SIZE = 48;
 const PLAYER_SPRITE_CENTER_X = 14;
+const TITLE_PIXEL = 4;
 
 export function render(ctx, state) {
   ctx.clearRect(0, 0, WORLD.width, WORLD.height);
@@ -498,23 +499,43 @@ function keyShortLabel(code) {
 }
 
 function drawTitleVines(ctx, time) {
-  ctx.strokeStyle = "rgba(55, 102, 61, 0.76)";
-  ctx.lineWidth = 5;
+  ctx.fillStyle = "rgba(55, 102, 61, 0.76)";
   for (let index = 0; index < 6; index += 1) {
     const y = 152 + index * 39;
-    ctx.beginPath();
-    ctx.moveTo(90, y);
-    for (let x = 90; x <= 870; x += 40) {
-      ctx.lineTo(x, y + Math.sin(time * 0.8 + x * 0.02 + index) * 10);
+    for (let x = 88; x <= 872; x += TITLE_PIXEL * 2) {
+      const waveY = y + Math.sin(time * 0.8 + x * 0.02 + index) * 10;
+      const pixelY = Math.round(waveY / TITLE_PIXEL) * TITLE_PIXEL;
+      ctx.fillRect(x, pixelY, TITLE_PIXEL * 2, TITLE_PIXEL);
     }
-    ctx.stroke();
   }
 
   for (let index = 0; index < 18; index += 1) {
-    const x = 110 + index * 44;
-    const y = 164 + (index % 6) * 38 + Math.sin(time + index) * 3;
-    drawCluster(ctx, x, y, index % 3 === 0 ? "#7432a8" : "#77bf52", 4);
+    const x = Math.round((110 + index * 44) / TITLE_PIXEL) * TITLE_PIXEL;
+    const y = Math.round((164 + (index % 6) * 38 + Math.sin(time + index) * 3) / TITLE_PIXEL) * TITLE_PIXEL;
+    drawPixelCluster(ctx, x, y, index % 3 === 0 ? "#7432a8" : "#77bf52");
   }
+}
+
+function drawPixelCluster(ctx, x, y, color) {
+  const pixels = [
+    [0, -12],
+    [-8, -8],
+    [8, -8],
+    [-12, 0],
+    [0, 0],
+    [12, 0],
+    [-8, 8],
+    [8, 8],
+    [0, 16],
+  ];
+
+  ctx.fillStyle = color;
+  for (const [offsetX, offsetY] of pixels) {
+    ctx.fillRect(x + offsetX, y + offsetY, TITLE_PIXEL * 2, TITLE_PIXEL * 2);
+  }
+
+  ctx.fillStyle = "rgba(247, 234, 209, 0.22)";
+  ctx.fillRect(x + TITLE_PIXEL, y - TITLE_PIXEL * 2, TITLE_PIXEL, TITLE_PIXEL);
 }
 
 function drawRotatingVerse(ctx, state) {
