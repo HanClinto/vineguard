@@ -294,6 +294,7 @@ function syncOverlays(game) {
   const highScorePanel = document.querySelector("#high-score-panel");
   const highScoreName = document.querySelector("#high-score-name");
   const gameOverActions = document.querySelector("#game-over-actions");
+  const titleCredit = document.querySelector("#title-credit");
 
   if (titleActions && startRun) {
     const onTitle = game.state.screen === "title";
@@ -316,6 +317,10 @@ function syncOverlays(game) {
 
   if (gameOverActions) {
     gameOverActions.hidden = game.state.screen !== "gameOver" || Boolean(game.state.pendingHighScore);
+  }
+
+  if (titleCredit) {
+    titleCredit.hidden = game.state.screen !== "title";
   }
 }
 

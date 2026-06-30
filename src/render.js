@@ -361,9 +361,6 @@ function drawTitleScreen(ctx, state) {
     : `${state.players.length} player${state.players.length === 1 ? "" : "s"} joined. Press Space or Start.`;
   ctx.fillText(joinText, WORLD.width / 2, 438);
 
-  ctx.font = `7px ${FONT}`;
-  ctx.fillStyle = "rgba(247, 234, 209, 0.72)";
-  ctx.fillText("By HanClinto Games for CGDC Speedgame Classic 2026", WORLD.width / 2, 512);
   ctx.textAlign = "left";
 }
 

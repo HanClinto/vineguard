@@ -95,6 +95,29 @@ canvas {
   transform: translateX(-50%);
 }
 
+.title-credit {
+  position: absolute;
+  left: 50%;
+  bottom: 4.2cqh;
+  z-index: 2;
+  display: flex;
+  gap: 0.65em;
+  align-items: center;
+  justify-content: center;
+  width: 74cqw;
+  color: rgba(247, 234, 209, 0.72);
+  font-size: clamp(6px, 0.729cqw, 7px);
+  line-height: 1;
+  text-align: center;
+  transform: translateX(-50%);
+}
+
+.title-credit a {
+  color: rgba(247, 224, 110, 0.82);
+  text-decoration: underline;
+  text-underline-offset: 0.35em;
+}
+
 #continue-title {
   min-width: 16cqw;
   min-height: 6.4cqh;
