@@ -14,16 +14,31 @@
       <main class="game-shell" aria-label="Vineguard game">
         <canvas id="game" width="960" height="540"></canvas>
       </main>
+      <div id="title-actions" class="title-actions">
+        <button id="start-run" type="button">Start Run</button>
+      </div>
+      <form id="high-score-panel" class="high-score-panel" hidden>
+        <label for="high-score-name">Team name</label>
+        <div class="score-entry-row">
+          <input id="high-score-name" type="text" maxlength="32" autocomplete="off" value="Vineguard Team">
+          <button type="submit">Save Score</button>
+        </div>
+      </form>
+      <div id="game-over-actions" class="game-over-actions" hidden>
+        <button id="continue-title" type="button">Continue</button>
+      </div>
       <div class="toolbar">
         <button id="options-toggle" type="button" aria-label="Options" aria-expanded="false" aria-controls="options-panel"></button>
       </div>
       <section id="options-panel" class="options-panel" hidden>
-        <label class="check-row">
-          <input id="skip-tutorial" type="checkbox">
-          <span>Skip tutorial</span>
-        </label>
+        <button id="options-close" class="options-close" type="button" aria-label="Close settings">X</button>
         <div id="controls-grid" class="controls-grid" aria-label="Control bindings"></div>
         <button id="reset-controls" type="button">Reset controls</button>
+        <h2>High Scores</h2>
+        <button id="reset-high-scores" type="button">Reset high scores</button>
+        <h2>Game Parameters</h2>
+        <div id="parameters-grid" class="parameters-grid" aria-label="Game parameters"></div>
+        <button id="reset-parameters" type="button">Reset parameters</button>
       </section>
     </div>
     <script type="module" src="src/main.js"></script>

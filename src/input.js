@@ -14,6 +14,10 @@ export function createInput(savedControls = null) {
   }
 
   window.addEventListener("keydown", (event) => {
+    if (isTypingTarget(event.target) || isTypingTarget(document.activeElement)) {
+      return;
+    }
+
     const controlIndex = findControlSet(event.code);
 
     if (controlIndex !== -1) {
@@ -33,6 +37,10 @@ export function createInput(savedControls = null) {
   });
 
   window.addEventListener("keyup", (event) => {
+    if (isTypingTarget(event.target) || isTypingTarget(document.activeElement)) {
+      return;
+    }
+
     down.delete(event.code);
   });
 
@@ -77,6 +85,14 @@ export function createInput(savedControls = null) {
   };
 }
 
+function isTypingTarget(target) {
+  if (!(target instanceof HTMLElement)) {
+    return false;
+  }
+
+  return target.isContentEditable || ["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName);
+}
+
 function normalizeControlSets(savedControls) {
   if (!Array.isArray(savedControls)) {
     return cloneControlSets(CONTROL_SETS);
@@ -84,12 +100,19 @@ function normalizeControlSets(savedControls) {
 
   return CONTROL_SETS.map((defaults, index) => {
     const saved = savedControls[index] || {};
+    const migrated = index === 3
+      && saved.left === "KeyP"
+      && saved.right === "Semicolon"
+      && saved.jump === "Quote"
+      && saved.down === "KeyL"
+        ? {}
+        : saved;
     return {
       name: defaults.name,
-      left: typeof saved.left === "string" ? saved.left : defaults.left,
-      right: typeof saved.right === "string" ? saved.right : defaults.right,
-      jump: typeof saved.jump === "string" ? saved.jump : defaults.jump,
-      down: typeof saved.down === "string" ? saved.down : defaults.down,
+      left: typeof migrated.left === "string" ? migrated.left : defaults.left,
+      right: typeof migrated.right === "string" ? migrated.right : defaults.right,
+      jump: typeof migrated.jump === "string" ? migrated.jump : defaults.jump,
+      down: typeof migrated.down === "string" ? migrated.down : defaults.down,
     };
   });
 }

@@ -1,22 +1,28 @@
-import { CONTROL_SETS, GRAPE_SITES, PLATFORMS, PLAYER_COLORS, PRESS, WORLD } from "./config.js";
+import { CONTROL_SETS, DEFAULT_HIGH_SCORES, DEFAULT_PARAMETERS, GRAPE_SPAWN, PLATFORMS, PLAYER_COLORS, PRESS, WORLD } from "./config.js";
 
 const PLAYER_WIDTH = 24;
 const PLAYER_HEIGHT = 34;
 const FOX_WIDTH = 34;
 const FOX_HEIGHT = 18;
-const GRAPE_STAGGER_SECONDS = 1.55;
-const BEST_RUN_KEY = "vineguard.bestRun";
-const FOX_ENTRY_OFFSETS = [-86, -52, -24, 24, 52, 86];
+const HIGH_SCORES_KEY = "vineguard.highScores";
+const OLD_DEFAULT_HIGH_SCORE_NAMES = new Set([
+  "David Jonathan",
+  "Paul Barnabas",
+  "Fiery Furnace",
+  "Magi",
+  "Matthew Mark Luke John",
+  "Four Lepers",
+]);
 
 export function createGame(input, options = {}) {
   const state = {
     screen: "title",
-    phase: 1,
     juice: 0,
-    juiceGoal: 3,
+    elapsed: 0,
+    titleTime: 0,
     message: "Press any listed control to join",
     players: [],
-    grapes: GRAPE_SITES.map(createGrape),
+    grapes: [],
     foxes: [],
     particles: [],
     winepress: {
@@ -29,56 +35,46 @@ export function createGame(input, options = {}) {
       highlightPumps: false,
     },
     foxSpawnTimer: 4,
-    roundOverTimer: 0,
+    grapeSpawnTimer: 1,
+    nextGrapeId: 1,
     tutorial: createTutorialState(),
     transition: null,
-    options: {
-      skipTutorial: Boolean(options.skipTutorial),
-    },
+    parameters: options.parameters ? normalizeParameters(options.parameters) : normalizeParameters({}),
     run: createRunState(),
     round: createRoundStats(),
-    bestRun: loadBestRun(),
+    highScores: loadHighScores(),
+    highScoreTab: "overall",
+    pendingHighScore: null,
     controls: input.getControlSets(),
+    controlStates: [],
   };
 
   function update(delta) {
     state.controls = input.getControlSets();
+    state.controlStates = state.controls.map(controlStateFor);
+    state.titleTime += delta;
 
     for (const controlIndex of input.consumeJoins()) {
       joinPlayer(controlIndex);
     }
 
-    if (state.players.length > 0 && state.screen === "title") {
-      startRound();
-    }
-
-    if (state.screen === "roundWon") {
-      state.roundOverTimer -= delta;
-      if (state.roundOverTimer <= 0) {
-        state.phase += 1;
-        startRound();
-      }
-      updateParticles(delta);
-      input.clearPressed();
-      return;
+    if (state.screen === "title" && state.players.length > 0 && input.wasPressed("Space")) {
+      startRun();
     }
 
     if (state.screen === "gameOver") {
-      if (input.wasPressed("KeyR")) {
-        state.phase = 1;
-        state.run = createRunState();
-        startRound();
-      }
       updateParticles(delta);
       input.clearPressed();
       return;
     }
 
     if (state.screen !== "playing") {
+      updateParticles(delta);
       input.clearPressed();
       return;
     }
 
+    state.elapsed += delta;
     updatePlayers(delta);
     updateGrapes(delta);
     updateFoxes(delta);
@@ -125,22 +121,36 @@ export function createGame(input, options = {}) {
     state.run.playerCount = Math.max(state.run.playerCount, state.players.length);
   }
 
-  function startRound() {
+  function controlStateFor(controls) {
+    return {
+      left: input.isDown(controls.left),
+      right: input.isDown(controls.right),
+      jump: input.isDown(controls.jump),
+      down: input.isDown(controls.down),
+    };
+  }
+
+  function startRun() {
+    if (state.players.length === 0) {
+      return;
+    }
+
     state.screen = "playing";
+    state.elapsed = 0;
     state.juice = 0;
-    state.message = isTutorialRound() ? "Tutorial" : `Phase ${state.phase}`;
+    state.message = "Protect the vineyard";
     state.transition = null;
     state.tutorial = createTutorialState();
-    state.tutorial.active = isTutorialRound();
-    state.grapes = isTutorialRound()
-      ? [createGrape(GRAPE_SITES[2], 0)]
-      : GRAPE_SITES.slice(0, grapeCountForPhase(state.phase)).map(createGrape);
-    state.round = createRoundStats(state.grapes.length);
-    state.run.planted += state.round.planted;
+    state.nextGrapeId = 1;
+    state.grapes = [];
+    state.round = createRoundStats();
+    state.run = createRunState();
+    state.run.playerCount = state.players.length;
     state.foxes = [];
     state.particles = [];
-    state.foxSpawnTimer = isTutorialRound() ? 999 : foxDelayForPhase(state.phase);
-    state.juiceGoal = goalForPhase(state.phase);
+    state.foxSpawnTimer = currentFoxInterval();
+    state.grapeSpawnTimer = currentGrapeInterval();
+    state.pendingHighScore = null;
     state.winepress.loaded = null;
     state.winepress.strokes = 0;
     state.winepress.leftOffset = 0;
@@ -159,19 +169,24 @@ export function createGame(input, options = {}) {
       player.groundPlatform = null;
       player.dropTimer = 0;
     }
+
+    for (let index = 0; index < state.parameters.startingGrapes; index += 1) {
+      spawnGrape();
+    }
   }
 
-  function createGrape(site, index) {
+  function createGrape(site) {
     return {
-      id: index + 1,
+      id: state.nextGrapeId++,
       x: site.x,
       y: site.y,
       stage: "blossom",
-      growth: -index * GRAPE_STAGGER_SECONDS,
+      growth: 0,
       stolenBy: null,
       onGround: false,
       gone: false,
       sparkle: 0,
+      juiceLeftMl: state.parameters.juicePerGrapeMl,
     };
   }
 
@@ -188,10 +203,6 @@ export function createGame(input, options = {}) {
       foxSpawned: false,
       text: "Press any listed controls to join.",
     };
-  }
-
-  function isTutorialRound() {
-    return isTutorialPhase(state.phase);
   }
 
   function updatePlayers(delta) {
@@ -300,9 +311,20 @@ export function createGame(input, options = {}) {
   function getAllPlatforms() {
     return [
       ...PLATFORMS,
+      vatPlatform(),
       pumpPlatform("left"),
       pumpPlatform("right"),
     ];
+  }
+
+  function vatPlatform() {
+    return {
+      x: PRESS.vat.x - 4,
+      y: PRESS.vat.y,
+      width: PRESS.vat.width + 8,
+      height: 10,
+      vat: true,
+    };
   }
 
   function pumpPlatform(side) {
@@ -342,14 +364,15 @@ export function createGame(input, options = {}) {
     state.winepress.lastPumpSide = side;
     state.winepress.strokes += 1;
     player.stats.pumpStrokes += 1;
+    state.juice += state.parameters.juicePerPumpMl;
+    state.run.totalJuice += state.parameters.juicePerPumpMl;
+    state.winepress.loaded.juiceLeftMl = Math.max(0, state.winepress.loaded.juiceLeftMl - state.parameters.juicePerPumpMl);
     if (state.tutorial.active) {
       state.tutorial.pumped = true;
     }
     burst(PRESS.vat.x + PRESS.vat.width / 2, PRESS.vat.y, "#c43b74", 8);
 
-    if (state.winepress.strokes >= PRESS.requiredStrokes) {
-      state.juice += 1;
-      state.run.totalJuice += 1;
+    if (state.winepress.loaded.juiceLeftMl <= 0) {
       state.winepress.loaded = null;
       state.winepress.strokes = 0;
       burst(PRESS.vat.x + PRESS.vat.width / 2, PRESS.vat.y - 8, "#7a2e70", 18);
@@ -392,6 +415,12 @@ export function createGame(input, options = {}) {
   }
 
   function updateGrapes(delta) {
+    state.grapeSpawnTimer -= delta;
+    if (state.grapeSpawnTimer <= 0) {
+      spawnGrape();
+      state.grapeSpawnTimer = currentGrapeInterval() * randomBetween(0.75, 1.25);
+    }
+
     for (const grape of state.grapes) {
       if (grape.gone || grape.stolenBy !== null || grape.onGround) {
         continue;
@@ -411,17 +440,54 @@ export function createGame(input, options = {}) {
         burst(grape.x, grape.y - 8, "#f7e06e", 16);
       }
     }
+
+    state.grapes = state.grapes.filter((grape) => !grape.gone || grape.stolenBy !== null || grape.onGround);
+  }
+
+  function spawnGrape() {
+    const activeGrapes = state.grapes.filter((grape) => !grape.gone || grape.stolenBy !== null || grape.onGround).length;
+    if (activeGrapes >= state.parameters.maxGrapes) {
+      return;
+    }
+
+    const site = randomGrapeSite();
+    const grape = createGrape(site);
+    state.grapes.push(grape);
+    state.round.planted += 1;
+    state.run.planted += 1;
+    burst(grape.x, grape.y - 8, "#ffd6ee", 6);
+  }
+
+  function randomGrapeSite() {
+    for (let attempt = 0; attempt < 30; attempt += 1) {
+      const site = {
+        x: randomBetween(GRAPE_SPAWN.marginX, WORLD.width - GRAPE_SPAWN.marginX),
+        y: randomBetween(GRAPE_SPAWN.minY, GRAPE_SPAWN.maxY),
+      };
+
+      if (!tooCloseToPress(site)) {
+        return site;
+      }
+    }
+
+    return {
+      x: randomBetween(GRAPE_SPAWN.marginX, WORLD.width - GRAPE_SPAWN.marginX),
+      y: randomBetween(GRAPE_SPAWN.minY, GRAPE_SPAWN.maxY),
+    };
+  }
+
+  function tooCloseToPress(site) {
+    const pressCenterX = PRESS.vat.x + PRESS.vat.width / 2;
+    const pressCenterY = PRESS.vat.y + PRESS.vat.height / 2;
+    return Math.abs(site.x - pressCenterX) < GRAPE_SPAWN.pressMarginX
+      && Math.abs(site.y - pressCenterY) < GRAPE_SPAWN.pressMarginY;
   }
 
   function updateFoxes(delta) {
-    if (state.tutorial.active) {
-      updateTutorialFox();
-    } else {
-      state.foxSpawnTimer -= delta;
-      if (state.foxSpawnTimer <= 0) {
-        spawnFox();
-        state.foxSpawnTimer = Math.max(1.1, foxDelayForPhase(state.phase) - 0.2 + Math.random() * 1.2);
-      }
+    state.foxSpawnTimer -= delta;
+    if (state.foxSpawnTimer <= 0) {
+      spawnFox();
+      state.foxSpawnTimer = currentFoxInterval() * randomBetween(0.75, 1.25);
     }
 
     for (const fox of state.foxes) {
@@ -472,26 +538,25 @@ export function createGame(input, options = {}) {
     state.foxes = state.foxes.filter((fox) => fox.x > -90 && fox.x < WORLD.width + 90);
   }
 
-  function updateTutorialFox() {
-    const grape = state.grapes[0];
-    if (!state.tutorial.foxSpawned && grape && grape.stage === "unripe" && canFoxSteal(grape)) {
-      spawnFox(grape, true);
-      state.tutorial.foxSpawned = true;
-    }
-  }
-
   function spawnFox(preferredTarget = null, forcedFromLeft = null) {
+    if (state.foxes.length >= state.parameters.maxFoxes) {
+      return;
+    }
+
     const candidates = preferredTarget && canFoxSteal(preferredTarget)
       ? [preferredTarget]
-      : state.grapes.filter((grape) => canFoxSteal(grape));
+      : availableFoxTargets();
     if (candidates.length === 0) {
       return;
     }
 
-    const fromLeft = forcedFromLeft ?? Math.random() < 0.5;
-    const target = candidates[Math.floor(Math.random() * candidates.length)];
+    const target = preferredTarget && canFoxSteal(preferredTarget)
+      ? preferredTarget
+      : leastDefendedGrape(candidates);
+    const fromLeft = forcedFromLeft ?? target.x < WORLD.width / 2;
     const targetY = foxLaneY(target);
-    const entryY = forcedFromLeft === null ? foxEntryY(targetY) : targetY;
+    const entryY = forcedFromLeft === null ? foxEntryY() : targetY;
+    const speed = state.parameters.foxSpeedStart + (state.elapsed / 60) * state.parameters.foxSpeedRampPerMinute;
     state.foxes.push({
       x: fromLeft ? -FOX_WIDTH : WORLD.width + FOX_WIDTH,
       y: entryY,
@@ -501,8 +566,8 @@ export function createGame(input, options = {}) {
       targetY,
       carrying: null,
       escapeDirection: fromLeft ? -1 : 1,
-      speed: 95 + state.phase * 12,
-      verticalSpeed: 70 + state.phase * 5,
+      speed,
+      verticalSpeed: 82 + (state.elapsed / 60) * 4,
       state: "seeking",
       facing: fromLeft ? 1 : -1,
       animationTime: 0,
@@ -510,9 +575,9 @@ export function createGame(input, options = {}) {
   }
 
   function retargetOrFlee(fox) {
-    const candidates = state.grapes.filter((grape) => canFoxSteal(grape));
+    const candidates = availableFoxTargets(fox);
     if (candidates.length > 0) {
-      fox.target = closestGrape(fox, candidates);
+      fox.target = leastDefendedGrape(candidates);
       fox.targetY = foxLaneY(fox.target);
       return;
     }
@@ -522,21 +587,40 @@ export function createGame(input, options = {}) {
     fox.escapeDirection = centerX(fox) < WORLD.width / 2 ? -1 : 1;
   }
 
-  function closestGrape(fox, grapes) {
-    let closest = grapes[0];
-    let closestDistance = distance(fox, closest);
+  function availableFoxTargets(ignoredFox = null) {
+    const targeted = new Set(
+      state.foxes
+        .filter((fox) => fox !== ignoredFox && fox.state !== "fleeing" && fox.target && !fox.carrying)
+        .map((fox) => fox.target),
+    );
+    return state.grapes.filter((grape) => canFoxSteal(grape) && !targeted.has(grape));
+  }
+
+  function leastDefendedGrape(grapes) {
+    let leastDefended = grapes[0];
+    let largestNearestPlayerDistance = defendedDistance(leastDefended);
+
     for (const grape of grapes.slice(1)) {
-      const grapeDistance = distance(fox, grape);
-      if (grapeDistance < closestDistance) {
-        closest = grape;
-        closestDistance = grapeDistance;
+      const grapeDistance = defendedDistance(grape);
+      if (grapeDistance > largestNearestPlayerDistance) {
+        leastDefended = grape;
+        largestNearestPlayerDistance = grapeDistance;
       }
     }
-    return closest;
+
+    return leastDefended;
+  }
+
+  function defendedDistance(grape) {
+    if (state.players.length === 0) {
+      return 0;
+    }
+
+    return Math.min(...state.players.map((player) => distance(player, grape)));
   }
 
   function canFoxSteal(grape) {
-    return !grape.gone && grape.stolenBy === null && (grape.stage === "unripe" || grape.stage === "ripe");
+    return !grape.gone && grape.stolenBy === null && grape.stage === "ripe";
   }
 
   function foxCanReachGrape(fox, grape) {
@@ -547,9 +631,8 @@ export function createGame(input, options = {}) {
     return clamp(grape.y + 14, 110, WORLD.floorY - FOX_HEIGHT);
   }
 
-  function foxEntryY(targetY) {
-    const offset = FOX_ENTRY_OFFSETS[Math.floor(Math.random() * FOX_ENTRY_OFFSETS.length)];
-    return clamp(targetY + offset, 96, WORLD.floorY - FOX_HEIGHT);
+  function foxEntryY() {
+    return randomBetween(96, WORLD.floorY - FOX_HEIGHT);
   }
 
   function scareFoxes(player) {
@@ -627,93 +710,107 @@ export function createGame(input, options = {}) {
   }
 
   function checkRoundState() {
-    if (state.tutorial.active) {
-      updateTutorialText();
-    }
-
-    if (state.juice >= state.juiceGoal) {
-      state.screen = "roundWon";
-      state.roundOverTimer = 4.2;
-      state.run.bestPhase = Math.max(state.run.bestPhase, state.phase);
-      saveBestRun(state.run);
-      state.bestRun = loadBestRun();
-      state.transition = createRoundTransition();
-      state.message = state.transition.title;
-      return;
-    }
-
-    const usefulGrapes = state.grapes.some((grape) => !grape.gone || grape.stolenBy !== null);
-    const carriedGrapes = state.players.some((player) => player.carrying) || state.winepress.loaded;
-    if (!usefulGrapes && !carriedGrapes) {
+    if (state.run.stolen >= state.parameters.stolenLimit) {
       state.screen = "gameOver";
-      saveBestRun(state.run);
-      state.bestRun = loadBestRun();
+      state.pendingHighScore = createHighScoreCandidate();
       state.transition = createGameOverTransition();
       state.message = state.transition.title;
     }
-  }
-
-  function createRoundTransition() {
-    const nextPhase = state.phase + 1;
-    return {
-      title: `Phase ${state.phase} complete`,
-      lines: [
-        `Harvested ${state.juice}/${state.round.planted} planted`,
-        `Stolen this phase: ${state.round.stolen}`,
-        `Run: ${state.run.totalJuice} juice | ${state.run.stolen} stolen`,
-        `Next: Phase ${nextPhase}`,
-        `${grapeCountForPhase(nextPhase)} vines | Goal ${goalForPhase(nextPhase)}`,
-      ],
-    };
   }
 
   function createGameOverTransition() {
     return {
       title: "Harvest ended",
       lines: [
-        `Reached phase ${state.phase}`,
-        `Run: ${state.run.totalJuice} juice | ${state.run.planted} planted`,
-        `Stolen by foxes: ${state.run.stolen}`,
-        `Best: phase ${state.bestRun.phase}, juice ${state.bestRun.juice}`,
-        "Press R to restart",
+        `Score: ${formatMl(state.run.totalJuice)}`,
+        `Foxes stole ${state.run.stolen}/${state.parameters.stolenLimit} grapes`,
+        `Protected for ${formatTime(state.elapsed)}`,
+        "Enter a team name for the local high score.",
+        "Press Continue to return to the main screen.",
       ],
     };
   }
 
-  function isTutorialPhase(phase) {
-    return phase === 1 && !state.options.skipTutorial;
+  function continueToTitle() {
+    state.screen = "title";
+    state.message = "Press any listed control to join";
+    state.transition = null;
+    state.pendingHighScore = null;
+    state.grapes = [];
+    state.foxes = [];
+    state.particles = [];
+    state.winepress.loaded = null;
+    state.winepress.strokes = 0;
+    state.winepress.leftOffset = 0;
+    state.winepress.rightOffset = 0;
+    state.winepress.lastPumpSide = null;
   }
 
-  function grapeCountForPhase(phase) {
-    return isTutorialPhase(phase) ? 1 : Math.min(4 + phase, GRAPE_SITES.length);
-  }
-
-  function goalForPhase(phase) {
-    return isTutorialPhase(phase) ? 1 : Math.min(3 + phase, 10);
-  }
-
-  function foxDelayForPhase(phase) {
-    return Math.max(1.4, 4.2 - phase * 0.35);
-  }
-
-  function foxPaceLabel(phase) {
-    if (phase >= 6) {
-      return "wild";
-    }
-
-    if (phase >= 3) {
-      return "quick";
-    }
-
-    return "steady";
+  function setHighScoreTab(tab) {
+    state.highScoreTab = ["overall", "1", "2", "3", "4"].includes(tab) ? tab : "overall";
   }
 
   function controlFor(controlIndex) {
     return input.getControlSet(controlIndex) || CONTROL_SETS[controlIndex];
   }
 
-  function setSkipTutorial(skipTutorial) {
-    state.options.skipTutorial = Boolean(skipTutorial);
+  function setParameters(parameters) {
+    state.parameters = normalizeParameters(parameters);
+  }
+
+  function resetParameters() {
+    state.parameters = normalizeParameters({});
+  }
+
+  function submitHighScore(name) {
+    if (!state.pendingHighScore) {
+      return state.highScores;
+    }
+
+    const entry = {
+      ...state.pendingHighScore,
+      name: cleanHighScoreName(name),
+    };
+    state.highScores = saveHighScore(entry);
+    state.pendingHighScore = null;
+    return state.highScores;
+  }
+
+  function resetHighScores() {
+    try {
+      localStorage.removeItem(HIGH_SCORES_KEY);
+    } catch {
+      // The game remains playable if storage is unavailable.
+    }
+
+    state.highScores = loadHighScores();
+    state.highScoreTab = "overall";
+    return state.highScores;
+  }
+
+  function createHighScoreCandidate() {
+    return {
+      name: "Vineguard Team",
+      scoreMl: state.run.totalJuice,
+      players: state.run.playerCount,
+      seconds: Math.round(state.elapsed),
+      stolen: state.run.stolen,
+      date: new Date().toISOString(),
+    };
+  }
+
+  function currentGrapeInterval() {
+    return Math.max(
+      state.parameters.grapeMinInterval,
+      state.parameters.grapeStartInterval - (state.elapsed / 60) * state.parameters.grapeIntervalRampPerMinute,
+    );
+  }
+
+  function currentFoxInterval() {
+    return Math.max(
+      state.parameters.foxMinInterval,
+      state.parameters.foxStartInterval - (state.elapsed / 60) * state.parameters.foxIntervalRampPerMinute,
+    );
   }
 
   function updateParticles(delta) {
@@ -747,11 +844,17 @@ export function createGame(input, options = {}) {
     update,
     debug: {
       joinPlayer,
-      startRound,
+      startRun,
+      continueToTitle,
+      submitHighScore,
+      setHighScoreTab,
+      resetHighScores,
       spawnFox,
+      spawnGrape,
       pump,
       canFoxSteal,
-      setSkipTutorial,
+      setParameters,
+      resetParameters,
       setGrapeStage(id, stage) {
         const grape = state.grapes.find((item) => item.id === id);
         if (grape) {
@@ -768,7 +871,6 @@ function createRunState() {
     totalJuice: 0,
     planted: 0,
     stolen: 0,
-    bestPhase: 0,
     playerCount: 0,
   };
 }
@@ -780,40 +882,118 @@ function createRoundStats(planted = 0) {
   };
 }
 
-function loadBestRun() {
+function normalizeParameters(parameters) {
+  const normalized = { ...DEFAULT_PARAMETERS };
+
+  for (const key of Object.keys(DEFAULT_PARAMETERS)) {
+    const value = Number(parameters?.[key]);
+    if (Number.isFinite(value)) {
+      normalized[key] = value;
+    }
+  }
+
+  normalized.stolenLimit = Math.max(1, Math.round(normalized.stolenLimit));
+  normalized.startingGrapes = Math.max(0, Math.round(normalized.startingGrapes));
+  normalized.maxGrapes = Math.max(1, Math.round(normalized.maxGrapes));
+  normalized.maxFoxes = Math.max(1, Math.round(normalized.maxFoxes));
+  normalized.juicePerPumpMl = Math.max(1, Math.round(normalized.juicePerPumpMl));
+  normalized.juicePerGrapeMl = Math.max(normalized.juicePerPumpMl, Math.round(normalized.juicePerGrapeMl));
+  normalized.grapeStartInterval = Math.max(0.2, normalized.grapeStartInterval);
+  normalized.grapeMinInterval = Math.max(0.2, Math.min(normalized.grapeMinInterval, normalized.grapeStartInterval));
+  normalized.foxStartInterval = Math.max(0.2, normalized.foxStartInterval);
+  normalized.foxMinInterval = Math.max(0.2, Math.min(normalized.foxMinInterval, normalized.foxStartInterval));
+  normalized.grapeIntervalRampPerMinute = Math.max(0, normalized.grapeIntervalRampPerMinute);
+  normalized.foxIntervalRampPerMinute = Math.max(0, normalized.foxIntervalRampPerMinute);
+  normalized.foxSpeedStart = Math.max(20, normalized.foxSpeedStart);
+  normalized.foxSpeedRampPerMinute = Math.max(0, normalized.foxSpeedRampPerMinute);
+
+  return normalized;
+}
+
+function loadHighScores() {
   try {
-    const saved = JSON.parse(localStorage.getItem(BEST_RUN_KEY) || "null");
-    if (!saved || typeof saved !== "object") {
-      return { phase: 0, juice: 0, players: 0 };
+    const rawScores = localStorage.getItem(HIGH_SCORES_KEY);
+    const saved = rawScores === null ? [] : JSON.parse(rawScores);
+    if (!Array.isArray(saved)) {
+      return defaultHighScores();
     }
 
-    return {
-      phase: Number(saved.phase) || 0,
-      juice: Number(saved.juice) || 0,
-      players: Number(saved.players) || 0,
-    };
+    return combineHighScores(defaultHighScores(), saved.map(normalizeHighScore).filter(Boolean));
   } catch {
-    return { phase: 0, juice: 0, players: 0 };
+    return defaultHighScores();
   }
 }
 
-function saveBestRun(run) {
-  const current = loadBestRun();
-  const candidate = {
-    phase: run.bestPhase,
-    juice: run.totalJuice,
-    players: run.playerCount,
-  };
+function defaultHighScores() {
+  return DEFAULT_HIGH_SCORES.map((entry, index) => normalizeHighScore({
+    ...entry,
+    date: `2026-01-${String(index + 1).padStart(2, "0")}T00:00:00.000Z`,
+  })).filter(Boolean).sort(compareHighScores);
+}
 
-  if (candidate.phase < current.phase || (candidate.phase === current.phase && candidate.juice <= current.juice)) {
-    return;
+function combineHighScores(defaultScores, savedScores) {
+  const byEntry = new Map();
+  for (const score of [...defaultScores, ...savedScores.filter((score) => !OLD_DEFAULT_HIGH_SCORE_NAMES.has(score.name))]) {
+    byEntry.set(`${score.name}|${score.players}|${score.scoreMl}`, score);
   }
 
+  return [...byEntry.values()].sort(compareHighScores);
+}
+
+function saveHighScore(entry) {
+  const scores = combineHighScores(defaultHighScores(), [...loadHighScores(), normalizeHighScore(entry)].filter(Boolean));
+
   try {
-    localStorage.setItem(BEST_RUN_KEY, JSON.stringify(candidate));
+    localStorage.setItem(HIGH_SCORES_KEY, JSON.stringify(scores));
   } catch {
     // The game remains playable if storage is unavailable.
   }
+
+  return scores;
+}
+
+function normalizeHighScore(entry) {
+  if (!entry || typeof entry !== "object") {
+    return null;
+  }
+
+  const scoreMl = Math.round(Number(entry.scoreMl));
+  if (!Number.isFinite(scoreMl) || scoreMl < 0) {
+    return null;
+  }
+
+  return {
+    name: cleanHighScoreName(entry.name),
+    scoreMl,
+    players: Math.max(1, Math.round(Number(entry.players) || 1)),
+    seconds: Math.max(0, Math.round(Number(entry.seconds) || 0)),
+    stolen: Math.max(0, Math.round(Number(entry.stolen) || 0)),
+    date: typeof entry.date === "string" ? entry.date : new Date().toISOString(),
+  };
+}
+
+function cleanHighScoreName(name) {
+  const cleaned = String(name || "Vineguard Team").trim().slice(0, 32);
+  return cleaned || "Vineguard Team";
+}
+
+function compareHighScores(left, right) {
+  return right.scoreMl - left.scoreMl || right.seconds - left.seconds;
+}
+
+function formatMl(value) {
+  return `${Math.round(value)} ml`;
+}
+
+function formatTime(seconds) {
+  const totalSeconds = Math.max(0, Math.round(seconds));
+  const minutes = Math.floor(totalSeconds / 60);
+  const remainder = totalSeconds % 60;
+  return `${minutes}:${String(remainder).padStart(2, "0")}`;
+}
+
+function randomBetween(min, max) {
+  return min + Math.random() * (max - min);
 }
 
 function overlaps(a, b) {

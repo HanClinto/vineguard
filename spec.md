@@ -17,7 +17,7 @@ _A fast-paced local multiplayer cooperative PvE harvest-and-defense action platf
 - Local couch co-op first. No online multiplayer.
 - Easy for mixed skill levels to play together.
 - One-screen arcade-cabinet feel.
-- Cooperation first, with playful individual stats between rounds.
+- Cooperation first, with playful individual stats and local high scores after runs.
 - Social, readable action: players should quickly understand what needs help.
 - Simple controls, no attack button required.
 - No-build HTML, JavaScript, and Canvas, deployable on GitHub Pages.
@@ -45,29 +45,28 @@ Vineguard should feel like a joyful, communal game about protecting what is grow
 - Players: 1-4 local players.
 - Balance target: 1 player can test and understand the loop, 2 players is minimum fun, 3 is adequate, 4 is best.
 - Session length: roughly 15 minutes max unless players get an especially strong run.
-- Round length: roughly 3-5 minutes.
-- Minimum satisfying version: one screen, four local players, foxes only, platformer movement, harvestable grapes, central see-saw winepress, round progression, and local high score.
+- Run shape: starts calm, then escalates until the team is overwhelmed.
+- Minimum satisfying version: one screen, four local players, foxes only, platformer movement, randomly spawning harvestable grapes, central see-saw winepress, escalating chaos, and local high scores.
 
 ## Core Game Loop
 
-Players defend grape clusters as they grow in a vineyard.
+Players defend grape clusters as they grow in a vineyard during one continuous escalating run.
 
 Grapes begin as blossoms, grow into fruit, and eventually ripen. Ripe grapes can be harvested by players, carried to the winepress, loaded into the vat, and pressed into juice.
 
 Foxes enter the vineyard and try to steal grapes. Players scare foxes away by approaching them. A scared fox drops what it is carrying and flees.
 
-The round ends when the juice jar is filled. The game ends when the players can no longer defend the vineyard, such as when all usable grapes are gone or stolen.
+The game ends when foxes have stolen too many grapes. The default stolen-grape limit is 10.
 
-Between rounds, players get a short pause, see team progress, and see individual contribution stats.
+The score is the total juice pressed, tracked internally in milliliters. The in-game juice display may show liters for readability, while high scores show milliliters so small contributions still feel visible.
 
-Play continues through escalating phases until the team loses. The team's high score records how much juice they collectively produced and how many players participated.
+The team's local high score records the entered team name, juice score, player count, run time, and stolen grapes.
 
 ## Vineyard And Grapes
 
-Grape clusters appear at fixed vine locations around the map.
+Grape clusters appear at random locations around the map, with margins from the screen edges and from the central winepress.
 
 Each cluster has clear growth states:
-
 - Blossom: cannot be harvested or stolen.
 - Unripe fruit: cannot be harvested by players, but can be stolen by foxes. If stolen and dropped, it disappears.
 - Ripe fruit: can be harvested by players and can be stolen by foxes. If stolen and dropped, it remains on the ground and can be picked up.
@@ -84,8 +83,8 @@ Foxes are the first and only required enemy type.
 
 Fox behavior:
 
-- Enter from an edge of the screen.
-- Choose a target grape cluster.
+- Enter from random locations on the left or right edge of the screen.
+- Choose a random target grape cluster.
 - Run toward the target.
 - Pick up the grapes if they reach the target.
 - Carry the grapes back toward a screen edge.
@@ -103,7 +102,7 @@ The winepress is the central social machine of the game.
 It has:
 
 - A central vat that holds one grape cluster at a time.
-- A juice jar or meter showing the round goal.
+- A juice jar or meter showing current juice produced.
 - Two piston platforms or pump handles, one on each side of the vat.
 
 The two pump platforms work like a dual-pump railway handcar mechanism:
@@ -112,6 +111,8 @@ The two pump platforms work like a dual-pump railway handcar mechanism:
 - Driving one side down raises the opposite side.
 - Standing still on a pump platform is not enough to press.
 - A player must be airborne and then land on the platform to cause a pump stroke.
+- Each valid alternating pump stroke immediately adds juice in milliliters.
+- A loaded grape cluster contains a finite amount of juice, so partial extractions still count toward the score.
 - One player can operate both sides by jumping back and forth, but this should be slow.
 - Two players alternating jumps should press much faster.
 - Great timing should feel satisfying, but mediocre timing should still work.
@@ -128,7 +129,7 @@ Important readability cues:
 - When a player is carrying grapes and the press is empty, highlight the vat or show a clear deposit cue.
 - When the vat is loaded and ready to press, highlight the pump platforms.
 - Fox intent should be readable: players should be able to tell which grape cluster a fox is targeting or whether it is escaping with grapes.
-- The juice jar should clearly show progress toward the round goal.
+- The juice jar should clearly show accumulated juice.
 - Danger should be visible before failure feels sudden.
 
 Avoid tutorial text during active play. Favor animation, color, particles, outlines, and simple icons.
@@ -176,22 +177,24 @@ Keyboard ghosting should be tested early, because four players on one keyboard m
 
 ## Difficulty And Progression
 
-The game progresses through phases or rounds.
+The game is one continuous level that starts simple and gradually becomes more chaotic.
 
-Later phases can increase difficulty by:
+Difficulty increases over time by:
 
-- Adding more grape clusters.
-- Spawning more foxes.
-- Increasing the juice goal.
+- Spawning grapes more quickly.
+- Spawning foxes more quickly.
+- Allowing more active grapes and foxes on screen.
 - Making foxes faster or more coordinated.
+
+Grape spawn rate and fox spawn rate should have separate tuning parameters so playtesters can try different escalation curves.
 
 Do not increase difficulty automatically just because more players join. High scores should record the number of players.
 
-Aim for phase 6 to be wild and difficult, but possibly beatable by a highly skilled group.
+The default run ends when foxes have stolen 10 grapes, but this should be tunable from debug controls.
 
 ## Stats And Awards
 
-Between rounds, show team progress and playful individual contribution stats.
+After a run, show team progress and playful individual contribution stats.
 
 Stats should celebrate different kinds of contribution rather than shame weaker players.
 
@@ -218,7 +221,7 @@ The game should feel warm, festive, and communal rather than grim or violent.
 
 Song of Solomon 2:15 is the central verse.
 
-Verses may appear on the splash screen and between rounds as decorative flavor text.
+Verses may appear on the main screen as rotating decorative flavor text.
 
 The game mechanics should carry the theme more than in-game text does. Active play should remain readable and uncluttered.
 
@@ -237,7 +240,7 @@ Keep the code simple, modular, and understandable. Clear separation is preferred
 - Grapes and vineyard state
 - Fox behavior
 - Winepress behavior
-- Round progression and scoring
+- Continuous progression and scoring
 
 Avoid overengineering. Prefer direct, readable game logic over frameworks unless a tiny helper library becomes clearly worthwhile.
 
@@ -250,11 +253,11 @@ Build in this order:
 3. Platformer movement and collision.
 4. Grape growth states and harvesting.
 5. Winepress deposit and two-sided pump interaction.
-6. Juice jar goal and round win state.
+6. Milliliter-based juice scoring and stolen-grape game over.
 7. Fox targeting, stealing, escaping, and scare-away behavior.
-8. Round progression and between-round stats.
+8. Continuous spawn-rate progression, high scores, and debug tuning controls.
 9. Gamepad support.
-10. Polish: particles, highlights, animations, sound, title screen, high score.
+10. Polish: particles, highlights, animations, sound, title screen, high scores.
 
 ## Testing And Verification
 
@@ -270,9 +273,10 @@ Important flows to verify:
 - Ripe grapes can be deposited into the empty winepress vat.
 - If the vat is occupied, a player keeps carrying their grapes.
 - Pump strokes require landing on a pump platform from the air.
-- Alternating pump strokes add juice and can complete a round.
+- Alternating pump strokes add milliliters immediately.
 - Foxes drop stolen ripe grapes when scared and can escape with grapes if not stopped.
-- A round can be won by filling the juice jar.
+- The game ends when foxes reach the stolen-grape limit.
+- Local high-score entry stores the team name and score.
 
 Use browser automation, screenshots, and direct game-state checks where practical. If something cannot be verified automatically, record what was manually checked or left unverified.
 
