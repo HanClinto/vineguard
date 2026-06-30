@@ -4,7 +4,7 @@ import { drawFrame, foxAnimations, playerAnimations, sprites } from "./sprites.j
 const FONT = '"Press Start 2P", monospace';
 const PLAYER_SPRITE_SIZE = 48;
 const PLAYER_SPRITE_CENTER_X = 14;
-const TITLE_PIXEL = 4;
+const TITLE_PIXEL = 2;
 
 export function render(ctx, state) {
   ctx.clearRect(0, 0, WORLD.width, WORLD.height);
