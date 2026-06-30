@@ -4,7 +4,7 @@ import { drawFrame, foxAnimations, playerAnimations, sprites } from "./sprites.j
 const FONT = '"Press Start 2P", monospace';
 const PLAYER_SPRITE_SIZE = 48;
 const PLAYER_SPRITE_CENTER_X = 14;
-const TITLE_PIXEL = 2;
+const TITLE_PIXEL = PLAYER_SPRITE_SIZE / sprites.frameSize;
 
 export function render(ctx, state) {
   ctx.setTransform(1, 0, 0, 1, 0, 0);
@@ -506,10 +506,10 @@ function drawTitleVines(ctx, time) {
   ctx.fillStyle = "rgba(55, 102, 61, 0.76)";
   for (let index = 0; index < 6; index += 1) {
     const y = 152 + index * 39;
-    for (let x = 88; x <= 872; x += TITLE_PIXEL * 2) {
+    for (let x = 88; x <= 872; x += TITLE_PIXEL) {
       const waveY = y + Math.sin(time * 0.8 + x * 0.02 + index) * 10;
       const pixelY = Math.round(waveY / TITLE_PIXEL) * TITLE_PIXEL;
-      ctx.fillRect(x, pixelY, TITLE_PIXEL * 2, TITLE_PIXEL * 2);
+      ctx.fillRect(x, pixelY, TITLE_PIXEL, TITLE_PIXEL);
     }
   }
 
@@ -522,19 +522,19 @@ function drawTitleVines(ctx, time) {
 
 function drawPixelCluster(ctx, x, y, color) {
   const grapes = [
-    [-4, -12],
-    [4, -12],
-    [-8, -6],
-    [0, -6],
-    [8, -6],
-    [-4, 0],
-    [4, 0],
-    [0, 6],
+    [-2, -6],
+    [2, -6],
+    [-4, -3],
+    [0, -3],
+    [4, -3],
+    [-2, 0],
+    [2, 0],
+    [0, 3],
   ];
 
   ctx.fillStyle = color;
-  for (const [offsetX, offsetY] of grapes) {
-    drawTinyRoundedPixel(ctx, x + offsetX, y + offsetY, TITLE_PIXEL * 3);
+  for (const [gridX, gridY] of grapes) {
+    drawTinyRoundedPixel(ctx, x + gridX * TITLE_PIXEL, y + gridY * TITLE_PIXEL, TITLE_PIXEL * 3);
   }
 
   ctx.fillStyle = "rgba(247, 234, 209, 0.22)";
