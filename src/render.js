@@ -530,11 +530,16 @@ function drawPixelCluster(ctx, x, y, color) {
 
   ctx.fillStyle = color;
   for (const [offsetX, offsetY] of grapes) {
-    ctx.fillRect(x + offsetX, y + offsetY, TITLE_PIXEL * 3, TITLE_PIXEL * 3);
+    drawTinyRoundedPixel(ctx, x + offsetX, y + offsetY, TITLE_PIXEL * 3);
   }
 
   ctx.fillStyle = "rgba(247, 234, 209, 0.22)";
   ctx.fillRect(x, y - TITLE_PIXEL * 5, TITLE_PIXEL, TITLE_PIXEL);
+}
+
+function drawTinyRoundedPixel(ctx, x, y, size) {
+  ctx.fillRect(x + 1, y, size - 2, size);
+  ctx.fillRect(x, y + 1, size, size - 2);
 }
 
 function drawRotatingVerse(ctx, state) {
