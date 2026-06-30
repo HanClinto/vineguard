@@ -61,16 +61,16 @@ function drawGrapes(ctx, state) {
     ctx.fillRect(grape.x - 20, grape.y - 30, 40, 5);
 
     if (grape.stage === "blossom") {
-      drawGrapeSprite(ctx, sprites.grapes.blossom, grape.x, grape.y - 8, 32, () => {
+      drawGrapeSprite(ctx, grapeSprite("blossom"), grape.x, grape.y - 8, 32, () => {
         drawBlossom(ctx, grape.x, grape.y - 8);
       });
     } else if (grape.stage === "unripe") {
-      drawGrapeSprite(ctx, sprites.grapes.unripe, grape.x, grape.y - 8, 32, () => {
+      drawGrapeSprite(ctx, grapeSprite("unripe"), grape.x, grape.y - 8, 32, () => {
         drawCluster(ctx, grape.x, grape.y - 8, "#77bf52", 5);
       });
     } else {
       const pulse = Math.sin(grape.sparkle * 8) * 2;
-      drawGrapeSprite(ctx, sprites.grapes.ripe, grape.x, grape.y - 8 + pulse, 32, () => {
+      drawGrapeSprite(ctx, grapeSprite("ripe"), grape.x, grape.y - 8 + pulse, 32, () => {
         drawCluster(ctx, grape.x, grape.y - 8 + pulse, "#7432a8", 7);
       });
       ctx.strokeStyle = "#f7e06e";
@@ -79,8 +79,12 @@ function drawGrapes(ctx, state) {
   }
 }
 
+function grapeSprite(stage) {
+  return sprites.grapes?.[stage] || null;
+}
+
 function drawGrapeSprite(ctx, sprite, x, y, size, fallback) {
-  if (!sprite.complete || sprite.naturalWidth === 0) {
+  if (!sprite || !sprite.complete || sprite.naturalWidth === 0) {
     fallback();
     return;
   }
@@ -204,7 +208,7 @@ function drawFoxes(ctx, state) {
     }
 
     if (fox.carrying) {
-      drawGrapeSprite(ctx, sprites.grapes.ripe, fox.x + fox.width / 2, fox.y - 8, 24, () => {
+      drawGrapeSprite(ctx, grapeSprite("ripe"), fox.x + fox.width / 2, fox.y - 8, 24, () => {
         drawCluster(ctx, fox.x + fox.width / 2, fox.y - 8, "#7432a8", 4);
       });
     }
@@ -236,7 +240,7 @@ function drawPlayers(ctx, state) {
     }
 
     if (player.carrying) {
-      drawGrapeSprite(ctx, sprites.grapes.ripe, player.x + player.width / 2, player.y - 14, 28, () => {
+      drawGrapeSprite(ctx, grapeSprite("ripe"), player.x + player.width / 2, player.y - 14, 28, () => {
         drawCluster(ctx, player.x + player.width / 2, player.y - 14, "#7432a8", 5);
       });
     }
@@ -545,7 +549,7 @@ function drawTitleVines(ctx, time) {
 function drawTitleGrape(ctx, x, y, index) {
   const roll = seededTitleRandom(index);
   const stage = roll < 0.18 ? "blossom" : roll < 0.5 ? "ripe" : "unripe";
-  const sprite = sprites.grapes[stage];
+  const sprite = grapeSprite(stage);
   const size = stage === "blossom" ? 26 : 28;
   drawGrapeSprite(ctx, sprite, x, y, size, () => {
     if (stage === "blossom") {
