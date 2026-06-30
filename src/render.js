@@ -509,7 +509,7 @@ function drawTitleVines(ctx, time) {
     for (let x = 88; x <= 872; x += TITLE_PIXEL) {
       const waveY = y + Math.sin(time * 0.8 + x * 0.02 + index) * 10;
       const pixelY = Math.round(waveY / TITLE_PIXEL) * TITLE_PIXEL;
-      ctx.fillRect(x, pixelY, TITLE_PIXEL, TITLE_PIXEL);
+      ctx.fillRect(x, pixelY, TITLE_PIXEL, TITLE_PIXEL * 2);
     }
   }
 
@@ -522,23 +522,22 @@ function drawTitleVines(ctx, time) {
 
 function drawPixelCluster(ctx, x, y, color) {
   const grapes = [
-    [-2, -6],
-    [2, -6],
-    [-4, -3],
-    [0, -3],
-    [4, -3],
-    [-2, 0],
-    [2, 0],
-    [0, 3],
+    [0, -7],
+    [-5, -3],
+    [5, -3],
+    [-3, 2],
+    [3, 2],
+    [0, 7],
   ];
+  const grapeSize = TITLE_PIXEL * 5;
 
   ctx.fillStyle = color;
   for (const [gridX, gridY] of grapes) {
-    drawTinyRoundedPixel(ctx, x + gridX * TITLE_PIXEL, y + gridY * TITLE_PIXEL, TITLE_PIXEL * 3);
+    drawTinyRoundedPixel(ctx, x + gridX * TITLE_PIXEL, y + gridY * TITLE_PIXEL, grapeSize);
   }
 
   ctx.fillStyle = "rgba(247, 234, 209, 0.22)";
-  ctx.fillRect(x, y - TITLE_PIXEL * 5, TITLE_PIXEL, TITLE_PIXEL);
+  ctx.fillRect(x + TITLE_PIXEL, y - TITLE_PIXEL * 6, TITLE_PIXEL, TITLE_PIXEL);
 }
 
 function drawTinyRoundedPixel(ctx, x, y, size) {
