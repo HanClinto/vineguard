@@ -21,6 +21,7 @@ const PLAYER_MAX_FALL_SPEED = 880;
 const PLAYER_FAST_FALL_SPEED = 1120;
 const FOX_SWEAT_INTERVAL = 0.16;
 const HIGH_SCORES_KEY = "vineguard.highScores";
+const LAST_HIGH_SCORE_NAME_KEY = "vineguard.lastHighScoreName";
 const OLD_DEFAULT_HIGH_SCORE_NAMES = new Set([
   "David Jonathan",
   "Paul Barnabas",
@@ -863,6 +864,7 @@ export function createGame(input, options = {}) {
       ...state.pendingHighScore,
       name: cleanHighScoreName(name),
     };
+    saveLastHighScoreName(entry.name);
     state.highScores = saveHighScore(entry);
     state.pendingHighScore = null;
     continueToTitle();
@@ -883,7 +885,7 @@ export function createGame(input, options = {}) {
 
   function createHighScoreCandidate() {
     return {
-      name: "Vineguard Team",
+      name: loadLastHighScoreName(),
       scoreMl: state.run.totalJuice,
       players: state.run.playerCount,
       seconds: Math.round(state.elapsed),
@@ -1079,6 +1081,22 @@ function normalizeHighScore(entry) {
 function cleanHighScoreName(name) {
   const cleaned = String(name || "Vineguard Team").trim().slice(0, 32);
   return cleaned || "Vineguard Team";
+}
+
+function loadLastHighScoreName() {
+  try {
+    return cleanHighScoreName(localStorage.getItem(LAST_HIGH_SCORE_NAME_KEY));
+  } catch {
+    return "Vineguard Team";
+  }
+}
+
+function saveLastHighScoreName(name) {
+  try {
+    localStorage.setItem(LAST_HIGH_SCORE_NAME_KEY, cleanHighScoreName(name));
+  } catch {
+    // The game remains playable if storage is unavailable.
+  }
 }
 
 function compareHighScores(left, right) {
